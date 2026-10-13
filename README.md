@@ -6,7 +6,7 @@
 
 An integrated ComfyUI node pack combining Anima Style Explorer and ComfyUI-Raffle, with character sex filters, Auto Cycle, and Anima/SD tag formatting.
 
-整合版本：`1.1.1`。本项目是独立社区 fork，保留原有节点名称和接口。
+整合版本：`1.2.0`。本项目是独立社区 fork，保留原有节点名称和接口。
 
 ## 新增功能
 
@@ -41,6 +41,26 @@ Raffle 主面板新增 `tag_form` 下拉菜单：
 
 保留新增的纯文本节点：输入多行提示词，原样输出 `STRING` 类型的 `text`，无需连接 CLIP。可使用风格浏览器、随机风格和提示词补全，再接入独立文本编码或其他文本处理节点。
 
+### 4. Raffle Character
+
+在 `Raffle` 分类中新增 **Raffle Character**，直接从 Anima Style Explorer 的 Animadex 角色索引抽取角色，不需要连接输入节点。主面板仅保留五项控件：
+
+| 控件 | 默认值 | 行为 |
+| --- | --- | --- |
+| seed | `0` | 相同角色索引、筛选条件和种子得到相同角色 |
+| taglists_must_include | 空 | 角色的 trigger + tags 必须包含所有指定标签 |
+| filter_out_tags | 空 | 角色包含任一指定标签时，排除整个角色 |
+| tag_form | Anima | Anima 输出空格标签，SD 输出下划线标签；颜文字保留原样 |
+| character_sex | Female | Female、Male、Others，分类规则与浏览器和 Auto Cycle 一致 |
+
+两个输入框使用逗号或换行分隔标签，支持默认的空格写法，也兼容下划线写法及大小写差异。例如 `taglists_must_include` 填入 `touhou, blue eyes`，只会抽取完整 trigger + tags 同时包含 `touhou` 和 `blue eyes` 的角色。`filter_out_tags` 填入 `red eyes, long hair`，会排除包含其中任一标签的角色。
+
+两框均为空时，从当前 Character Sex 对应的角色池随机抽取。默认 Female 并不包含 Male 或 Others。
+
+保留三个输出口：**Raffled output** 和 **Unfiltered** 都输出抽中角色的完整 **trigger + tags**，按 `tag_form` 格式化。两者相同，因为此节点的标签条件用于筛选角色，不用于删减抽中角色的标签。**Debug info** 显示角色索引数量、候选池数量、种子、条件和抽中角色。
+
+角色数据与 Characters 页签共用本地索引。可在该页签使用 Update Styles 更新角色索引，再改变 seed 重新抽取。没有匹配角色时，节点会提示调整条件，不会绕过筛选条件抽取其他角色。
+
 ## 包含的节点
 
 | 节点名称 | 输出 | 用途 |
@@ -48,6 +68,7 @@ Raffle 主面板新增 `tag_form` 下拉菜单：
 | Anima Style Explorer | `CONDITIONING` | 浏览风格与角色，并用 CLIP 编码提示词 |
 | Anima Style Explorer (Text) | `STRING` | 浏览与编辑提示词，直接输出文本 |
 | Raffle | 三个 `STRING` | 输出筛选后的标签、未筛选标签和调试信息 |
+| Raffle Character | 三个 `STRING` | 按标签和性别抽取角色，输出完整 trigger + tags 及调试信息 |
 | Preview History (Raffle) | 图片预览界面 | 保存并显示最近生成的图片 |
 | Tag Category Strength (Raffle) | 两个 `STRING` | 按标签类别调整权重，输出标签和调试信息 |
 | Curved Rescale CFG (Raffle) | `MODEL` | 为模型应用曲线 CFG 重缩放 |
@@ -125,6 +146,16 @@ CheckpointLoader ---------------------------(clip)----------|
 
 `taglists_must_include` 要求候选列表包含所有指定标签；`exclude_taglists_containing` 排除包含任一指定标签的整个候选列表。`exclude_tag_categories`、`filter_out_tags` 和 `negative_prompt` 控制最终输出中的标签。筛选过严时，可根据 Debug info 中的标签池数量调整设置。
 
+### Raffle Character 工作流
+
+```text
+Raffle Character --(Raffled output)--> CLIP Text Encode --(conditioning)--> KSampler
+                                           ^
+CheckpointLoader ----------------(clip)----|
+```
+
+也可以将输出与 Raffle 的场景标签或其他提示词用文本拼接节点组合后再编码。Raffle Character 的 `filter_out_tags` 排除整个角色，原 Raffle 的同名控件只移除最终输出标签。
+
 ## 保留的原版功能
 
 - 本地风格数据、提示词补全和随机风格。
@@ -140,7 +171,7 @@ CheckpointLoader ---------------------------(clip)----------|
 
 本次整合修复了 Raffle 字符串断行造成的 Python 语法错误，补齐六个节点的注册、`WEB_DIRECTORY` 和实际路由注册调用，并让纯文本节点在修改标题后仍能获得前端控件。
 
-验证包括真实 ComfyUI 加载器、六个节点输入定义、前端资源注册、本机路由、实际 Raffle 数据，以及历史预览、类别权重与 CFG 的基本执行。浏览器中验证了三类角色筛选和 Auto Cycle 的角色替换。
+验证包括真实 ComfyUI 加载器、七个节点输入定义、前端资源注册、本机路由、实际 Raffle 与角色索引数据，以及历史预览、类别权重与 CFG 的基本执行。浏览器中验证了三类角色筛选和 Auto Cycle 的角色替换。
 
 回归测试可在仓库目录执行：
 
@@ -149,7 +180,7 @@ python -m unittest discover -s tests -p "test_*.py"
 node --test tests/character_filters.test.mjs tests/tag_format.test.mjs
 ```
 
-包含六项 Raffle 回归测试、三项角色分类测试和三项前端标签格式测试。验证未执行完整模型出图。
+包含六项 Raffle 回归测试、八项 Raffle Character 测试、三项角色分类测试和三项前端标签格式测试。验证未执行完整模型出图。
 
 ## 来源与致谢
 
