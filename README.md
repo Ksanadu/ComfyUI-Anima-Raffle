@@ -6,7 +6,7 @@
 
 An integrated ComfyUI node pack combining Anima Style Explorer and ComfyUI-Raffle, with character sex filters, Auto Cycle, and Anima/SD tag formatting.
 
-整合版本：`1.1.0`。本项目是独立社区 fork，保留原有节点名称和接口。
+整合版本：`1.1.1`。本项目是独立社区 fork，保留原有节点名称和接口。
 
 ## 新增功能
 
@@ -30,10 +30,12 @@ Raffle 主面板新增 `tag_form` 下拉菜单：
 
 | 选项 | 示例 | 行为 |
 | --- | --- | --- |
-| Anima | `best_quality` → `best quality` | 将抽取标签中的所有下划线替换为空格 |
+| Anima | `best_quality` → `best quality` | 将普通词组标签的下划线替换为空格，保留颜文字 |
 | SD（默认） | `best_quality` | 保留原有下划线格式，兼容原工作流 |
 
 格式转换同时应用于 **Raffled output** 和 **Unfiltered**。抽签种子、标签池筛选、输出标签顺序及 **Debug info** 均不改变，不需要额外的下划线替换节点。
+
+`^_^`、`o_o`、`>_<`、`@_@`、`T_T` 等颜文字保留原样。角色 `Trigger + tags` 的插入与复制也使用相同的保留规则；颜文字仍可通过负面提示词或标签过滤选项移除。
 
 ### 3. Anima Style Explorer (Text)
 
@@ -144,10 +146,10 @@ CheckpointLoader ---------------------------(clip)----------|
 
 ```bash
 python -m unittest discover -s tests -p "test_*.py"
-node --test tests/character_filters.test.mjs
+node --test tests/character_filters.test.mjs tests/tag_format.test.mjs
 ```
 
-包含四项 Raffle 回归测试和三项角色分类测试。验证未执行完整模型出图。
+包含六项 Raffle 回归测试、三项角色分类测试和三项前端标签格式测试。验证未执行完整模型出图。
 
 ## 来源与致谢
 

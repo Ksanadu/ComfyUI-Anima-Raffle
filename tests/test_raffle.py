@@ -77,6 +77,34 @@ class RaffleFormatTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "No tags available"):
             raffle.Raffle().process_tags(**dict(self.kwargs, taglists_must_include="missing_tag"))
 
+    def test_emoticons_survive_both_outputs_with_word_tags(self):
+        faces = ["^_^", "o_o", ">_<", "@_@", "._.", "T_T", "0_0", "<|>_<|>", "mg_mg", "=__=", ">_o"]
+        words = ["a_cup", "m_k", "au_ra", "k_on!", "cz_75", "青_目"]
+        lists = Path(raffle.__file__).parent / "lists"
+        with (lists / "categorized_tags.txt").open("a", encoding="utf-8") as file:
+            for tag in faces + words:
+                file.write(f"[expressions_and_mental_state] {tag}\n")
+        (lists / "taglists-general.txt").write_text(
+            ",".join(["1girl", "best_quality"] + faces + words), encoding="utf-8",
+        )
+        node = raffle.Raffle()
+        anima = node.process_tags(**self.kwargs, tag_form="Anima")
+        expected = ", ".join(["1girl", "best quality"] + faces + ["a cup", "m k", "au ra", "k on!", "cz 75", "青 目"])
+        self.assertEqual(anima[:2], (expected, expected))
+        sd = node.process_tags(**self.kwargs, tag_form="SD")
+        self.assertIn("best_quality", sd[0])
+        self.assertEqual(anima[2], sd[2])
+
+    def test_emoticons_remain_filterable_before_formatting(self):
+        lists = Path(raffle.__file__).parent / "lists"
+        with (lists / "categorized_tags.txt").open("a", encoding="utf-8") as file:
+            file.write("[expressions_and_mental_state] ^_^\n[expressions_and_mental_state] o_o\n")
+        (lists / "taglists-general.txt").write_text("1girl,best_quality,^_^,o_o", encoding="utf-8")
+        result = raffle.Raffle().process_tags(**self.kwargs, tag_form="Anima",
+                                             negative_prompt="o_o", filter_out_tags="^_^")
+        self.assertEqual(result[0], "1girl, best quality")
+        self.assertEqual(result[1], "1girl, best quality, ^_^, o_o")
+
 
 if __name__ == "__main__":
     unittest.main()

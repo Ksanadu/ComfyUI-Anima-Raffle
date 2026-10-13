@@ -1,5 +1,6 @@
 import { Data } from "./data.js";
 import { thumbUrl } from "./utils.js";
+import { splitPromptTagList } from "./tag_format.js";
 
 export const AC = (() => {
     let el, ta, atIdx = -1, _debounceTimer = null;
@@ -81,9 +82,7 @@ export const AC = (() => {
         const before = val.slice(0, atIdx);
         const after = val.slice(cursor).replace(/^,?\s*/, "");
         const kind = String(artist?.source_kind || "").toLowerCase();
-        const spaceTag = String(kind === "character" ? (artist.trigger || artist.tag) : artist.tag)
-            .replace(/^@+/, "")
-            .replace(/_/g, " ");
+        const spaceTag = splitPromptTagList(kind === "character" ? (artist.trigger || artist.tag) : artist.tag).join(", ");
         const insert = kind === "character" ? spaceTag : `@${spaceTag}`;
         ta.value = `${before}${insert}, ${after}`.trimEnd();
         const pos = before.length + insert.length;

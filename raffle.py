@@ -1,6 +1,16 @@
 import os
 import folder_paths
 import random
+import re
+
+
+_EMOTICON_TAG_RE = re.compile(r"(?:[0-9oOuUxXtTvVqQ]|[^\w\s]+)_+(?:[0-9oOuUxXtTvVqQ]|[^\w\s]+)")
+
+
+def format_anima_tag(tag):
+    if _EMOTICON_TAG_RE.fullmatch(tag) or tag.lower() == "mg_mg":
+        return tag
+    return tag.replace('_', ' ')
 
 # Default values for Raffle node
 DEFAULT_FILTER_OUT_TAGS = """monochrome, greyscale,
@@ -116,7 +126,7 @@ class Raffle:
                 }),
                 "tag_form": (["Anima", "SD"], {
                     "default": "SD",
-                    "tooltip": "Choose the tag formatting style: 'SD' keeps underscores in tags, while 'Anima' replaces all underscores with spaces."
+                    "tooltip": "SD keeps underscores. Anima replaces word separators with spaces while preserving emoticons such as ^_^ and o_o."
                 })
             },
             "optional": {
@@ -359,10 +369,10 @@ class Raffle:
 
         debug_info = f"Taglist pool size: {len(all_valid_taglists)}\n\n{categories_debug}"
         
-        # Apply tag_form: if 'Anima', replace underscores with spaces in output tags
+        # Format only after selection and filtering; preserve emoticon spelling.
         if tag_form == "Anima":
-            filtered_tags = [tag.replace('_', ' ') for tag in filtered_tags]
-            unfiltered_taglist = ', '.join([tag.replace('_', ' ') for tag in self.normalize_tags(unfiltered_taglist)])
+            filtered_tags = [format_anima_tag(tag) for tag in filtered_tags]
+            unfiltered_taglist = ', '.join(format_anima_tag(tag) for tag in self.normalize_tags(unfiltered_taglist))
 
         return_values = (
             ', '.join(filtered_tags),

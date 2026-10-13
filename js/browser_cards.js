@@ -1,17 +1,5 @@
 import { escapeHtml } from "./browser_helpers.js";
-
-function splitPromptTagList(value = []) {
-    const raw = Array.isArray(value) ? value : [value];
-    return raw
-        .flatMap((item) => String(item || "").split(","))
-        .map((part) => part
-            .replace(/^@+/, "")
-            .replace(/\\([()])/g, "$1")
-            .replace(/_/g, " ")
-            .replace(/\s+/g, " ")
-            .trim())
-        .filter(Boolean);
-}
+import { splitPromptTagList } from "./tag_format.js";
 
 function characterTriggerParts(artist, mode = "trigger") {
     const trigger = splitPromptTagList(artist?.trigger || artist?.tag || "");

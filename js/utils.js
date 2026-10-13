@@ -1,5 +1,6 @@
 import { app } from "../../scripts/app.js";
 import { CDN_BASE } from "./config.js";
+import { isEmoticonTag, splitPromptTagList } from "./tag_format.js";
 
 const CHARACTER_PARTS_PROP = "_anima_character_parts";
 
@@ -127,8 +128,8 @@ function normalizeArtist(value = "") {
 }
 
 function getFirstArtistToken(text = "") {
-    const match = String(text || "").match(/@[^,\n]+/);
-    return match ? match[0].trim() : "";
+    const matches = String(text || "").match(/@[^,\n]+/g) || [];
+    return matches.map((token) => token.trim()).find((token) => !isEmoticonTag(token)) || "";
 }
 
 function artistTokenToTag(token = "") {
@@ -224,19 +225,6 @@ function styleDisplayTag(tag = "") {
         .trim();
 }
 
-function splitPromptTagList(value = []) {
-    const raw = Array.isArray(value) ? value : [value];
-    return raw
-        .flatMap((item) => String(item || "").split(","))
-        .map((part) => part
-            .replace(/^@+/, "")
-            .replace(/\\([()])/g, "$1")
-            .replace(/_/g, " ")
-            .replace(/\s+/g, " ")
-            .trim())
-        .filter(Boolean);
-}
-
 function stylePromptToken(tag = "") {
     const display = styleDisplayTag(tag);
     return display ? `@${display}` : "";
@@ -261,7 +249,7 @@ export function getStylePromptSlotsFromText(current = "") {
     const parts = promptParts(current);
     return parts
         .map((part, partIndex) => {
-            if (!String(part || "").trim().startsWith("@")) return null;
+            if (!String(part || "").trim().startsWith("@") || isEmoticonTag(part)) return null;
             const display = styleDisplayTag(part);
             if (!display) return null;
             return {
@@ -342,17 +330,18 @@ function injectStyleTagGroup(current = "", tags = []) {
 
     if (!text) return `${tokenText}, `;
 
-    if (/^\s*@/.test(text)) {
+    if (/^\s*@/.test(text) && !isEmoticonTag(text.split(",")[0])) {
         const parts = text.split(",");
-        while (parts.length && parts[0].trim().startsWith("@")) {
+        while (parts.length && parts[0].trim().startsWith("@") && !isEmoticonTag(parts[0])) {
             parts.shift();
         }
         const rest = parts.join(",").trim().replace(/^[,\s]+/g, "");
         return rest ? `${tokenText}, ${rest}` : `${tokenText}, `;
     }
 
-    if (/@[^,\n]+/.test(text)) {
-        return text.replace(/@[^,\n]+(,\s*)?/, `${tokenText}, `);
+    const artistToken = getFirstArtistToken(text);
+    if (artistToken) {
+        return text.replace(artistToken, tokenText);
     }
 
     return `${tokenText}, ${text.replace(/^[,\s]+/g, "")}`;
@@ -399,13 +388,7 @@ function appendPromptTagsDetailed(current = "", tags = []) {
 }
 
 function normalizePromptPart(value = "") {
-    return String(value || "")
-        .replace(/^@+/, "")
-        .replace(/\\([()])/g, "$1")
-        .replace(/_/g, " ")
-        .replace(/\s+/g, " ")
-        .trim()
-        .toLowerCase();
+    return splitPromptTagList(value).join(", ").toLowerCase();
 }
 
 function removePromptTagSequence(current = "", tags = []) {
