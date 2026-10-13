@@ -1,6 +1,7 @@
 import { api } from "../../scripts/api.js";
 import { FULLET_API_BASE, FULLET_BASE, SITE_BASE } from "./config.js";
 import { Data } from "./data.js";
+import { CHARACTER_SEX_OPTIONS, getCharacterSexCategory } from "./character_filters.js";
 import {
     escapeHtml,
     favoriteKeyFromItem,
@@ -33,6 +34,7 @@ export const Browser = (() => {
     let el, grid, countEl, promptEditor, promptStatus, onPick, activeNode = null;
     let _promptPollTimer = null;
     let filter = "", sort = "works", category = "all", _renderId = 0, _observer, _lastList = [], _lastHighlightedTag = "";
+    let characterSex = "female";
     const FULLET_PROMPTS_PAGE_SIZE = 48;
     const FULLET_PROMPTS_SCROLL_MARGIN = 960;
     let _fulletPosts = [], _fulletLoaded = false, _fulletNextOffset = 0, _fulletHasMore = true, _fulletLoading = false, _fulletLoadPromise = null, _fulletScrollHandler = null, _fulletError = "";
@@ -225,8 +227,13 @@ export const Browser = (() => {
             btn.classList.toggle("active", active);
             btn.style.opacity = active ? "1" : "0.72";
         }
-        const sortSelect = el.querySelector(".hdr-select");
+        const sortSelect = el.querySelector("#anima-browser-sort-select");
         if (sortSelect) sortSelect.disabled = !_isSortableCategory();
+        const sexSelect = el.querySelector("#anima-browser-sex-select");
+        if (sexSelect) {
+            sexSelect.style.display = category === "animadex-characters" ? "" : "none";
+            sexSelect.value = characterSex;
+        }
     }
 
     function _detachFulletScrollHandler() {
@@ -769,6 +776,9 @@ export const Browser = (() => {
             setSort: (value) => {
                 sort = value;
             },
+            setCharacterSex: (value) => {
+                characterSex = CHARACTER_SEX_OPTIONS.has(value) ? value : "female";
+            },
             setCategory: (value) => {
                 category = value;
             },
@@ -944,7 +954,10 @@ export const Browser = (() => {
             : await Data.all();
         if (id !== _renderId) return;
 
-        const list = buildStyleList(full, { sort, filter });
+        const characters = category === "animadex-characters"
+            ? full.filter((item) => getCharacterSexCategory(item) === characterSex)
+            : full;
+        const list = buildStyleList(characters, { sort, filter });
         const countLabel = category === "animadex-styles"
             ? "Animadex styles"
             : category === "animadex-characters"

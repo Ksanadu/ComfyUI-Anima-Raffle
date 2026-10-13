@@ -21,6 +21,7 @@ export function attachBrowserEvents({
     dataReset,
     setFilter,
     setSort,
+    setCharacterSex,
     setCategory,
     setCategoryTabs,
     setObserver,
@@ -328,8 +329,13 @@ export function attachBrowserEvents({
         }, 2000);
     });
 
-    el.querySelector(".hdr-select").addEventListener("change", (e) => {
+    el.querySelector("#anima-browser-sort-select").addEventListener("change", (e) => {
         setSort(e.target.value);
+        render();
+    });
+
+    el.querySelector("#anima-browser-sex-select").addEventListener("change", (e) => {
+        setCharacterSex(e.target.value);
         render();
     });
 

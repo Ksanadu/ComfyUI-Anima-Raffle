@@ -10,7 +10,7 @@ const ANIMA_SIZE_KEY = "_anima_saved_size";
 function isAnimaNode(node) {
     const cls = String(node?.comfyClass || node?.type || node?.constructor?.comfyClass || "");
     const title = String(node?.title || "");
-    return cls === "AnimaStyleExplorer" || title.includes("Anima Style Explorer");
+    return cls === "AnimaStyleExplorer" || cls === "AnimaStyleExplorerText" || title.includes("Anima Style Explorer");
 }
 
 function ensureWidgetArray(node) {
@@ -262,7 +262,7 @@ app.registerExtension({
     name: "AnimaStyleExplorer",
 
     async beforeRegisterNodeDef(nodeType, nodeData) {
-        if (nodeData.name !== "AnimaStyleExplorer") return;
+        if (nodeData.name !== "AnimaStyleExplorer" && nodeData.name !== "AnimaStyleExplorerText") return;
         injectCSS();
 
         const origOnNodeCreated = nodeType.prototype.onNodeCreated;

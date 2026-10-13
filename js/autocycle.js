@@ -1,12 +1,14 @@
 import { app } from "../../scripts/app.js";
 import { api } from "../../scripts/api.js";
 import { Data } from "./data.js";
+import { CHARACTER_SEX_OPTIONS, getCharacterSexCategory } from "./character_filters.js";
 import { applyCharacterGroup, applyStyle, applyStyleGroup } from "./utils.js";
 
 const CONFIG_KEY = "anima_autocycle_config_v1";
 const DEFAULT_CONFIG = {
     source: "styles",
     characterMode: "trigger",
+    characterSex: "female",
     artistCount: 1,
     characterCount: 1,
     subject: "keep",
@@ -36,6 +38,8 @@ function readStoredConfig() {
 function normalizeConfig(raw = {}) {
     const source = ["styles", "characters", "all"].includes(raw.source) ? raw.source : DEFAULT_CONFIG.source;
     const characterMode = raw.characterMode === "trigger-tags" ? "trigger-tags" : DEFAULT_CONFIG.characterMode;
+    const rawSex = String(raw.characterSex || "").trim().toLowerCase();
+    const characterSex = CHARACTER_SEX_OPTIONS.has(rawSex) ? rawSex : DEFAULT_CONFIG.characterSex;
     const random = raw.random === "weighted" ? "weighted" : DEFAULT_CONFIG.random;
     const artistCount = Math.max(1, Math.min(6, Number.parseInt(raw.artistCount, 10) || DEFAULT_CONFIG.artistCount));
     const characterCount = Math.max(1, Math.min(6, Number.parseInt(raw.characterCount, 10) || DEFAULT_CONFIG.characterCount));
@@ -46,6 +50,7 @@ function normalizeConfig(raw = {}) {
     return {
         source,
         characterMode,
+        characterSex,
         artistCount,
         characterCount,
         subject,
@@ -110,10 +115,16 @@ function itemWeight(item) {
     return Number.isFinite(raw) && raw > 0 ? raw : 1;
 }
 
+function matchesCharacterSex(item, config) {
+    if (!isCharacter(item)) return true;
+    const wanted = CHARACTER_SEX_OPTIONS.has(config?.characterSex) ? config.characterSex : DEFAULT_CONFIG.characterSex;
+    return getCharacterSexCategory(item) === wanted;
+}
+
 function matchesSource(item, config) {
     if (!item) return false;
-    if (config.source === "all") return true;
-    if (config.source === "characters") return isCharacter(item);
+    if (config.source === "all") return !isCharacter(item) || matchesCharacterSex(item, config);
+    if (config.source === "characters") return isCharacter(item) && matchesCharacterSex(item, config);
     return !isCharacter(item);
 }
 
@@ -531,6 +542,7 @@ export const AutoCycle = (() => {
         if (host._animaCycleControlsBound) return;
         const sourceEl = host.querySelector?.("#anima-cycle-source");
         const modeEl = host.querySelector?.("#anima-cycle-character-mode");
+        const sexEl = host.querySelector?.("#anima-cycle-character-sex");
         const artistsEl = host.querySelector?.("#anima-cycle-artists");
         const charactersEl = host.querySelector?.("#anima-cycle-characters");
         const subjectEl = host.querySelector?.("#anima-cycle-subject");
@@ -540,11 +552,12 @@ export const AutoCycle = (() => {
         const settingsBtn = host.querySelector?.("#anima-cycle-settings");
         const settingsPanel = host.querySelector?.("#anima-cycle-settings-panel");
         const settingsClose = host.querySelector?.("#anima-cycle-settings-close");
-        if (!sourceEl || !modeEl || !artistsEl || !charactersEl || !subjectEl || !repeatsEl || !randomEl || !resumeEl) return;
+        if (!sourceEl || !modeEl || !sexEl || !artistsEl || !charactersEl || !subjectEl || !repeatsEl || !randomEl || !resumeEl) return;
 
         const config = getConfig();
         sourceEl.value = config.source;
         modeEl.value = config.characterMode;
+        sexEl.value = config.characterSex;
         artistsEl.value = String(config.artistCount);
         charactersEl.value = String(config.characterCount);
         subjectEl.value = config.subject;
@@ -593,6 +606,7 @@ export const AutoCycle = (() => {
             saveConfig({
                 source: sourceEl.value,
                 characterMode: modeEl.value,
+                characterSex: sexEl.value,
                 artistCount: artistsEl.value,
                 characterCount: charactersEl.value,
                 subject: subjectEl.value,
@@ -602,7 +616,7 @@ export const AutoCycle = (() => {
             });
         };
 
-        [sourceEl, modeEl, artistsEl, charactersEl, subjectEl, repeatsEl, randomEl, resumeEl].forEach((control) => {
+        [sourceEl, modeEl, sexEl, artistsEl, charactersEl, subjectEl, repeatsEl, randomEl, resumeEl].forEach((control) => {
             control.addEventListener("change", persist);
             control.addEventListener("input", persist);
         });

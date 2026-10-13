@@ -1,16 +1,16 @@
 [project]
-name = "comfyui-anima-style-nodes"
-description = "A quality-of-life node for ComfyUI that lets you browse anime artists, Animadex styles, character tags, visual previews, prompt autocomplete, and configurable Auto Cycle prompt testing."
-version = "1.0.9"
-license = {text = "MIT License"}
+name = "comfyui-anima-raffle"
+description = "Integrated Anima Style Explorer and ComfyUI-Raffle nodes with character sex filters, Auto Cycle, and Anima/SD tag formatting."
+version = "1.1.0"
 dependencies = ["aiohttp"]
-authors = [{ name = "fulletlab" }]
+authors = [{ name = "fulletlab" }, { name = "rainlizard" }]
+maintainers = [{ name = "Ksanadu" }]
 
 [project.urls]
-Repository = "https://github.com/fulletlab/comfyui-anima-style-nodes"
+Repository = "https://github.com/Ksanadu/ComfyUI-Anima-Raffle"
+"Anima upstream" = "https://github.com/fulletLab/comfyui-anima-style-nodes"
+"Raffle upstream" = "https://github.com/rainlizard/ComfyUI-Raffle"
 
 [tool.comfy]
-PublisherId = "fulletlab"
-DisplayName = "Anima Style Explorer"
-Icon = "https://raw.githubusercontent.com/fulletlab/comfyui-anima-style-nodes/master/assets/banner.jpg"
-
+DisplayName = "ComfyUI Anima Raffle"
+Icon = "https://raw.githubusercontent.com/Ksanadu/ComfyUI-Anima-Raffle/master/assets/banner.jpg"

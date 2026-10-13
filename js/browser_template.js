@@ -11,10 +11,15 @@
                         <button class="hdr-btn-txt" id="anima-cat-fullet" style="opacity:0.5;">Fullet Prompts</button>
                         <button class="hdr-btn-txt" id="anima-cat-favorites" style="opacity:0.5;">Favorites</button>
                     </div>
-                    <select class="hdr-select" style="margin-left:8px">
+                    <select class="hdr-select" id="anima-browser-sort-select" aria-label="Sort" style="margin-left:8px">
                         <option value="works">Popularity</option>
                         <option value="uniqueness">Uniqueness</option>
                         <option value="name">A - Z</option>
+                    </select>
+                    <select class="hdr-select" id="anima-browser-sex-select" aria-label="Character Sex" title="Character Sex" style="margin-left:8px;display:none">
+                        <option value="female">Female</option>
+                        <option value="male">Male</option>
+                        <option value="others">Others</option>
                     </select>
                     <div class="hdr-gap"></div>
                     <span class="anima-fullet-auth" id="anima-fullet-auth">API key not set</span>
@@ -78,6 +83,14 @@
                                     <select id="anima-cycle-character-mode">
                                         <option value="trigger">Trigger</option>
                                         <option value="trigger-tags">Trigger + tags</option>
+                                    </select>
+                                </label>
+                                <label class="cycle-control">
+                                    <span>Character Sex</span>
+                                    <select id="anima-cycle-character-sex">
+                                        <option value="female">Female</option>
+                                        <option value="male">Male</option>
+                                        <option value="others">Others</option>
                                     </select>
                                 </label>
                                 <label class="cycle-control cycle-control-small">
