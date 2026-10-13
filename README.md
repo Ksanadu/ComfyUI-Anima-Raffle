@@ -8,6 +8,17 @@ This is an independent community tool. It works offline by default and only uses
 
 Current version: `1.0.9`
 
+## Fork additions / 本 Fork 新增内容
+
+This fork adds **Anima Style Explorer (Text)** (`AnimaStyleExplorerText`), a text-only variant of the original node:
+
+- Accepts a multiline prompt and returns it unchanged through a `STRING` output named `text`.
+- Does not require a `CLIP` input or perform text encoding.
+- Reuses the existing style browser, random style selection, and prompt autocomplete.
+- Can connect to CLIP Text Encode, prompt composition nodes, or other nodes that accept a string.
+
+本 Fork 新增 **Anima Style Explorer (Text)** 纯文本节点：无需连接 CLIP，支持多行提示词，原样输出 `STRING` 类型的 `text`。可使用原有风格浏览器、随机风格和提示词补全，并连接到 CLIP 文本编码或其他文本处理节点。原版输出 `CONDITIONING` 的节点仍然保留。
+
 ---
 
 ## Installation
@@ -21,10 +32,11 @@ ComfyUI/custom_nodes/
 
 3. Restart ComfyUI.
 
-The node appears as:
+The nodes appear under the `Anima` category as:
 
 ```text
 Anima Style Explorer
+Anima Style Explorer (Text)
 ```
 
 ---
@@ -40,6 +52,16 @@ CheckpointLoader
 ```
 
 The node works like a CLIP Text Encode replacement: write a prompt, choose styles or characters visually, and send the encoded conditioning directly to the sampler.
+
+For the new text-only node, use a separate encoder:
+
+```text
+Anima Style Explorer (Text) --(text)--> CLIP Text Encode --(conditioning)--> KSampler (positive)
+                                            ^
+CheckpointLoader ----------------(clip)------|
+```
+
+The text output can also be sent through other prompt processing nodes before encoding.
 
 ---
 
@@ -119,6 +141,25 @@ Connect a Fullet Personal API Key to publish recent local generations as normal 
 - Fullet publishing only uses the key the user provides.
 - API keys are stored locally and are not embedded in workflows.
 
+---
+
+## Registry Metadata
+
+This package is ready for the ComfyUI Registry using:
+
+```toml
+[tool.comfy]
+PublisherId = "fulletlab"
+DisplayName = "Anima Style Explorer"
+```
+
+Publish with:
+
+```bash
+comfy node publish
+```
+
+---
 
 ## Credits
 
