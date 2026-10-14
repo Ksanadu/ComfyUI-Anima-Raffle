@@ -1,6 +1,5 @@
 import folder_paths
 import os
-import torch
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 import server # Required for preview generation
@@ -39,7 +38,8 @@ def create_placeholder(size=(128, 128), text="?"):
 
 class PreviewHistory:
     # Lock for file system operations in the target directory
-    _dir_lock = threading.Lock()
+    _dir_lock = threading.RLock()
+    _history_revision = 0
 
     def __init__(self):
         self.output_dir = folder_paths.get_temp_directory() # For UI previews
@@ -65,9 +65,41 @@ class PreviewHistory:
     OUTPUT_NODE = True
     CATEGORY = "Raffle/Previews"
 
+    @classmethod
+    def IS_CHANGED(cls, image, history_size):
+        # Clearing history must invalidate previously cached preview results.
+        with cls._dir_lock:
+            return cls._history_revision
+
+    @classmethod
+    def clear_history(cls):
+        """Clear this node's shared history and temporary previews only."""
+        counts = {"deleted_history": 0, "deleted_previews": 0}
+        with cls._dir_lock:
+            cls._history_revision += 1
+            for directory, prefix, key in (
+                (DEFAULT_HISTORY_FOLDER, "history_", "deleted_history"),
+                (folder_paths.get_temp_directory(), "PreviewHistory_Item_", "deleted_previews"),
+            ):
+                if not os.path.exists(directory):
+                    continue
+                with os.scandir(directory) as entries:
+                    for entry in entries:
+                        if (entry.name.startswith(prefix)
+                                and entry.name.lower().endswith(".png")
+                                and entry.is_file(follow_symlinks=False)):
+                            os.remove(entry.path)
+                            counts[key] += 1
+        return counts
+
     # --- Main Execution ---
 
     def execute(self, image, history_size):
+        # Keep saving and preview copying atomic with respect to Clear History.
+        with self._dir_lock:
+            return self._execute(image, history_size)
+
+    def _execute(self, image, history_size):
 
         history_folder = DEFAULT_HISTORY_FOLDER
 
@@ -200,4 +232,4 @@ NODE_CLASS_MAPPINGS = {
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     "PreviewHistory": "Preview History (Raffle)"
-} 
+}

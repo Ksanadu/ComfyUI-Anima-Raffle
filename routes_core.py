@@ -1,8 +1,10 @@
+import asyncio
 import os
 
 from aiohttp import web
 
 from . import artist_data
+from .preview_history import PreviewHistory
 
 
 def register_core_routes(server, require_local_token=None):
@@ -17,6 +19,23 @@ def register_core_routes(server, require_local_token=None):
     @server.instance.routes.get("/anima/test")
     async def test_route(request):
         return web.json_response({"status": "ok", "message": "Anima routes are active"})
+
+    @server.instance.routes.post("/anima/preview_history/clear")
+    async def clear_preview_history(request):
+        if require_local_token is not None:
+            denied = require_local_token(request)
+            if denied is not None:
+                return denied
+        try:
+            counts = await asyncio.to_thread(PreviewHistory.clear_history)
+        except OSError as e:
+            print(f"[PreviewHistory] Could not clear history: {e}")
+            return web.json_response({
+                "success": False,
+                "error": "Could not clear history. Check folder permissions.",
+            }, status=500)
+        server.instance.send_sync("raffle.preview_history.cleared", counts)
+        return web.json_response({"success": True, **counts})
 
     @server.instance.routes.get("/anima/artists")
     async def get_artists(request):

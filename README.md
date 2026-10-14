@@ -6,7 +6,7 @@
 
 An integrated ComfyUI node pack combining Anima Style Explorer and ComfyUI-Raffle, with character sex filters, Auto Cycle, and Anima/SD tag formatting.
 
-整合版本：`1.2.1`。本项目是独立社区 fork，保留原有节点名称和接口。
+整合版本：`1.3.0`。本项目是独立社区 fork，保留原有节点名称和接口。
 
 ## 新增功能
 
@@ -63,6 +63,14 @@ Raffle 主面板新增 `tag_form` 下拉菜单：
 
 角色数据与 Characters 页签共用本地索引。可在该页签使用 Update Styles 更新角色索引，再改变 seed 重新抽取。没有匹配角色时，节点会提示调整条件，不会绕过筛选条件抽取其他角色。
 
+### 5. Preview History：一键清空
+
+**Preview History (Raffle)** 新增 **Clear History** 按钮。点击即可删除该节点包保存的历史图片和对应的临时缩略图，并清空所有 Preview History 节点的预览，无需排队执行工作流。
+
+历史目录由所有 Preview History 节点共用，因此按钮会清空共用历史。只删除该节点生成的 `history_*.png` 与 `PreviewHistory_Item_*.png`，其他文件和 Save Image 保存的出图不受影响。清空后可继续积累新历史；如果工作流仍在出图，后续生成的图片会重新进入历史。
+
+**Preview History (Raffle)** now includes a **Clear History** button. One click clears its shared image history and temporary thumbnails and updates all Preview History previews immediately, without queuing the workflow. Other files and Save Image outputs are preserved; subsequent generations start a new history.
+
 ## 包含的节点
 
 | 节点名称 | 输出 | 用途 |
@@ -71,7 +79,7 @@ Raffle 主面板新增 `tag_form` 下拉菜单：
 | Anima Style Explorer (Text) | `STRING` | 浏览与编辑提示词，直接输出文本 |
 | Raffle | 三个 `STRING` | 输出筛选后的标签、未筛选标签和调试信息 |
 | Raffle Character | 三个 `STRING` | 按标签和性别抽取角色，输出完整 trigger + tags 及调试信息 |
-| Preview History (Raffle) | 图片预览界面 | 保存并显示最近生成的图片 |
+| Preview History (Raffle) | 图片预览界面 | 保存并显示最近生成的图片，支持一键清空共用历史 |
 | Tag Category Strength (Raffle) | 两个 `STRING` | 按标签类别调整权重，输出标签和调试信息 |
 | Curved Rescale CFG (Raffle) | `MODEL` | 为模型应用曲线 CFG 重缩放 |
 
@@ -179,10 +187,10 @@ CheckpointLoader ----------------(clip)----|
 
 ```bash
 python -m unittest discover -s tests -p "test_*.py"
-node --test tests/character_filters.test.mjs tests/tag_format.test.mjs
+node --test tests/character_filters.test.mjs tests/tag_format.test.mjs tests/preview_history.test.mjs
 ```
 
-包含七项 Raffle 回归测试、八项 Raffle Character 测试、三项角色分类测试和三项前端标签格式测试。验证未执行完整模型出图。
+包含七项 Raffle 回归测试、八项 Raffle Character 测试、三项角色分类测试、三项前端标签格式测试，以及九项历史清空与接口测试、五项清空按钮测试。清空测试只使用临时文件，覆盖删除范围、缓存失效、并发出图、请求授权和前端预览更新。验证未执行完整模型出图。
 
 ## 来源与致谢
 
