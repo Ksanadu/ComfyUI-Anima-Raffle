@@ -49,6 +49,29 @@ class RaffleFormatTests(unittest.TestCase):
         self.assertEqual(result[0], "1girl, best_quality, blue_hair, smile")
         self.assertEqual(result[1], "1girl, best_quality, blue_hair, smile, example_artist")
 
+    def test_seed_control_preserves_tag_form_during_force_input_migration(self):
+        schema = raffle.Raffle.INPUT_TYPES()
+        declared_slots = []
+        forced_slots = []
+        for group in ("required", "optional"):
+            for name, (_, options) in schema[group].items():
+                declared_slots.append(name)
+                forced_slots.append(bool(options.get("forceInput")))
+                if options.get("control_after_generate"):
+                    declared_slots.append("control_after_generate")
+                    forced_slots.append(False)
+
+        self.assertEqual(declared_slots[1], "control_after_generate")
+        self.assertEqual(declared_slots[-2:], ["tag_form", "negative_prompt"])
+        for tag_form in ("Anima", "SD"):
+            saved = [0, "fixed", False, False, True, True, "1girl", "", "", "", tag_form]
+            for values in (saved, saved + [None]):
+                # The frontend removes old forceInput placeholders only when slot counts match.
+                restored = [value for value, forced in zip(values, forced_slots) if not forced] \
+                    if len(values) == len(forced_slots) else values
+                self.assertEqual(restored, saved)
+                self.assertEqual(restored[-1], tag_form)
+
     def test_anima_formats_both_outputs_after_filtering(self):
         node = raffle.Raffle()
         kwargs = dict(self.kwargs, negative_prompt="blue hair", filter_out_tags="smile")

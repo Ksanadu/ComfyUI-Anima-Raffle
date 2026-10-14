@@ -6,7 +6,7 @@
 
 An integrated ComfyUI node pack combining Anima Style Explorer and ComfyUI-Raffle, with character sex filters, Auto Cycle, and Anima/SD tag formatting.
 
-整合版本：`1.2.0`。本项目是独立社区 fork，保留原有节点名称和接口。
+整合版本：`1.2.1`。本项目是独立社区 fork，保留原有节点名称和接口。
 
 ## 新增功能
 
@@ -34,6 +34,8 @@ Raffle 主面板新增 `tag_form` 下拉菜单：
 | SD（默认） | `best_quality` | 保留原有下划线格式，兼容原工作流 |
 
 格式转换同时应用于 **Raffled output** 和 **Unfiltered**。抽签种子、标签池筛选、输出标签顺序及 **Debug info** 均不改变，不需要额外的下划线替换节点。
+
+`1.2.1` 修复了 Raffle 的 `tag_form` 在 F5 刷新或重新打开工作流后重置的问题。Anima 和 SD 选择均可保留，已有工作流可直接加载。
 
 `^_^`、`o_o`、`>_<`、`@_@`、`T_T` 等颜文字保留原样。角色 `Trigger + tags` 的插入与复制也使用相同的保留规则；颜文字仍可通过负面提示词或标签过滤选项移除。
 
@@ -180,7 +182,7 @@ python -m unittest discover -s tests -p "test_*.py"
 node --test tests/character_filters.test.mjs tests/tag_format.test.mjs
 ```
 
-包含六项 Raffle 回归测试、八项 Raffle Character 测试、三项角色分类测试和三项前端标签格式测试。验证未执行完整模型出图。
+包含七项 Raffle 回归测试、八项 Raffle Character 测试、三项角色分类测试和三项前端标签格式测试。验证未执行完整模型出图。
 
 ## 来源与致谢
 

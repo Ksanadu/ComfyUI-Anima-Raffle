@@ -96,6 +96,7 @@ class Raffle:
             "required": {
                 "seed": ("INT", {
                     "default": 0,
+                    "control_after_generate": True,
                     "min": 0,
                     "max": 0xffffffffffffffff,
                     "tooltip": "Seed value used to randomly select a taglist from the filtered pool of available taglists"
