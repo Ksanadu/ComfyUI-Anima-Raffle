@@ -6,7 +6,7 @@
 
 An integrated ComfyUI node pack combining Anima Style Explorer and ComfyUI-Raffle, with character sex filters, Auto Cycle, and Anima/SD tag formatting.
 
-整合版本：`1.3.0`。本项目是独立社区 fork，保留原有节点名称和接口。
+整合版本：`1.4.0`。本项目是独立社区 fork，保留原有节点名称和接口。
 
 ## 新增功能
 
@@ -71,6 +71,25 @@ Raffle 主面板新增 `tag_form` 下拉菜单：
 
 **Preview History (Raffle)** now includes a **Clear History** button. One click clears its shared image history and temporary thumbnails and updates all Preview History previews immediately, without queuing the workflow. Other files and Save Image outputs are preserved; subsequent generations start a new history.
 
+### 6. Prompt Snapshot：随图片保存提示词
+
+**Prompt Snapshot (Raffle)** 接收 `text`，只读显示本次实际输入的完整提示词，并将原文保存到当前图片的工作流中。以后把该 PNG 拖回 ComfyUI，节点从图片内的记录恢复显示，不会读取另一个工作流的文本预览缓存，也会忽略旧任务迟到的显示更新。空格、换行、中文和颜文字均原样保留。
+
+建议放在图片保存路径上，确保先记录提示词，再保存图片：
+
+```text
+最终正面提示词 --(text)--> Prompt Snapshot (Raffle)
+VAE Decode ----(images)--> Prompt Snapshot (Raffle) --(images)--> Save Image
+```
+
+`text` 输出原样直通；`images` 输入可选，图片输出也原样直通。请将与 CLIP 编码相同的最终文本接入 `text`，将图片输出接入 Save Image。图片已接入时，不要把本节点的文本输出接回同一条出图路径的 CLIP 编码，否则会形成循环。
+
+只接文本时可作为保存状态的文本预览使用；要确保记录写入出图文件，请使用上面的图片连线。节点每次排队都重新写入当前工作流的记录，图片路径上的上游模型缓存仍可使用。修改其他控件不会自动改写已记录的文本，重新运行节点才会更新。
+
+使用保留 ComfyUI 工作流元数据的 PNG；关闭元数据保存或去掉图片元数据后无法恢复。该功能只保存安装后经此节点记录的新图片，无法补回旧图里缺失的提示词。
+
+**Prompt Snapshot (Raffle)** captures the exact received prompt in each image's embedded workflow. Reloading that PNG restores its own read-only text, with no dependence on another workflow's preview cache. Connect the final prompt to `text`, route VAE Decode through the node's `images` input/output into Save Image, and keep PNG workflow metadata enabled. Text and images pass through unchanged.
+
 ## 包含的节点
 
 | 节点名称 | 输出 | 用途 |
@@ -80,6 +99,7 @@ Raffle 主面板新增 `tag_form` 下拉菜单：
 | Raffle | 三个 `STRING` | 输出筛选后的标签、未筛选标签和调试信息 |
 | Raffle Character | 三个 `STRING` | 按标签和性别抽取角色，输出完整 trigger + tags 及调试信息 |
 | Preview History (Raffle) | 图片预览界面 | 保存并显示最近生成的图片，支持一键清空共用历史 |
+| Prompt Snapshot (Raffle) | `STRING`、`IMAGE` | 随图片工作流保存提示词，重新打开图片时恢复只读显示 |
 | Tag Category Strength (Raffle) | 两个 `STRING` | 按标签类别调整权重，输出标签和调试信息 |
 | Curved Rescale CFG (Raffle) | `MODEL` | 为模型应用曲线 CFG 重缩放 |
 
@@ -181,16 +201,22 @@ CheckpointLoader ----------------(clip)----|
 
 本次整合修复了 Raffle 字符串断行造成的 Python 语法错误，补齐六个节点的注册、`WEB_DIRECTORY` 和实际路由注册调用，并让纯文本节点在修改标题后仍能获得前端控件。
 
-验证包括真实 ComfyUI 加载器、七个节点输入定义、前端资源注册、本机路由、实际 Raffle 与角色索引数据，以及历史预览、类别权重与 CFG 的基本执行。浏览器中验证了三类角色筛选和 Auto Cycle 的角色替换。
+验证包括真实 ComfyUI 加载器、八个节点输入定义、前端资源注册、本机路由、实际 Raffle 与角色索引数据，以及历史预览、类别权重与 CFG 的基本执行。浏览器中验证了三类角色筛选和 Auto Cycle 的角色替换。
 
 回归测试可在仓库目录执行：
 
 ```bash
 python -m unittest discover -s tests -p "test_*.py"
-node --test tests/character_filters.test.mjs tests/tag_format.test.mjs tests/preview_history.test.mjs
+node --test tests/*.test.mjs
 ```
 
-包含七项 Raffle 回归测试、八项 Raffle Character 测试、三项角色分类测试、三项前端标签格式测试，以及九项历史清空与接口测试、五项清空按钮测试。清空测试只使用临时文件，覆盖删除范围、缓存失效、并发出图、请求授权和前端预览更新。验证未执行完整模型出图。
+真实 PNG 快照测试使用 ComfyUI 的 Python 环境执行，最后一个参数为 ComfyUI 根目录：
+
+```bash
+python tests/check_prompt_snapshot_comfy.py /path/to/ComfyUI
+```
+
+包含七项 Raffle 回归测试、八项 Raffle Character 测试、三项角色分类测试、三项前端标签格式测试、九项历史清空与接口测试、五项清空按钮测试，以及七项提示词快照测试和六项快照恢复测试。清空测试只使用临时文件，覆盖删除范围、缓存失效、并发出图、请求授权和前端预览更新。快照还使用真实 ComfyUI 执行器与 Save Image 验证连续出图、缓存命中和 PNG 元数据回读。验证未执行完整模型出图。
 
 ## 来源与致谢
 

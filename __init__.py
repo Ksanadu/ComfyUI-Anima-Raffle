@@ -2,6 +2,7 @@ from .nodes import NODE_CLASS_MAPPINGS as ANIMA_NODE_MAPPINGS, NODE_DISPLAY_NAME
 from .raffle import NODE_CLASS_MAPPINGS as RAFFLE_NODE_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS as RAFFLE_DISPLAY_NAME_MAPPINGS
 from .raffle_character import RaffleCharacter
 from .preview_history import PreviewHistory
+from .prompt_snapshot import PromptSnapshot
 from .tag_category_strength import TagCategoryStrength
 from .curved_rescale_cfg import CurvedRescaleCFG
 
@@ -10,6 +11,7 @@ NODE_CLASS_MAPPINGS = {
     **RAFFLE_NODE_MAPPINGS,
     "RaffleCharacter": RaffleCharacter,
     "PreviewHistory": PreviewHistory,
+    "PromptSnapshot": PromptSnapshot,
     "TagCategoryStrength": TagCategoryStrength,
     "CurvedRescaleCFG": CurvedRescaleCFG,
 }
@@ -19,6 +21,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     **RAFFLE_DISPLAY_NAME_MAPPINGS,
     "RaffleCharacter": "Raffle Character",
     "PreviewHistory": "Preview History (Raffle)",
+    "PromptSnapshot": "Prompt Snapshot (Raffle)",
     "TagCategoryStrength": "Tag Category Strength (Raffle)",
     "CurvedRescaleCFG": "Curved Rescale CFG (Raffle)",
 }
