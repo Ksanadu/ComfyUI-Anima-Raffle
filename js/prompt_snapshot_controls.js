@@ -1,9 +1,23 @@
 const SNAPSHOT_KEY = "anima_prompt_snapshot";
 const REQUEST_KEY = "anima_prompt_snapshot_request";
 
-export function registerPromptSnapshot(app, ComfyWidgets) {
+export function registerPromptSnapshot(app, ComfyWidgets, api) {
+    const completedSnapshots = new Map();
+    function rememberSnapshot(message) {
+        const requestId = message?.snapshot_request?.[0];
+        const text = message?.saved_text?.[0];
+        if (typeof requestId !== "string" || !requestId || typeof text !== "string") return;
+        completedSnapshots.delete(requestId);
+        completedSnapshots.set(requestId, text);
+        if (completedSnapshots.size > 256) completedSnapshots.delete(completedSnapshots.keys().next().value);
+    }
     app.registerExtension({
         name: "AnimaRaffle.PromptSnapshot",
+        setup() {
+            // Executed events arrive even when another workflow is active.
+            // Keep them by request UUID, never by a possibly reused node ID.
+            api?.addEventListener("executed", ({ detail }) => rememberSnapshot(detail?.output));
+        },
         beforeRegisterNodeDef(nodeType, nodeData) {
             if (nodeData.name !== "PromptSnapshot") return;
             const originalCreated = nodeType.prototype.onNodeCreated;
@@ -38,6 +52,10 @@ export function registerPromptSnapshot(app, ComfyWidgets) {
                     const value = originalConfigure?.apply(this, arguments);
                     restored = true;
                     pendingRequests.clear();
+                    const requestId = node.properties[REQUEST_KEY];
+                    if (completedSnapshots.has(requestId)) {
+                        node.properties[SNAPSHOT_KEY] = completedSnapshots.get(requestId);
+                    }
                     showSavedPrompt();
                     return value;
                 };
@@ -52,6 +70,7 @@ export function registerPromptSnapshot(app, ComfyWidgets) {
                         || requestId === node.properties[REQUEST_KEY]);
                     if (!expected && (restored || requestId)) return;
                     pendingRequests.delete(requestId);
+                    rememberSnapshot(message);
                     const value = originalExecuted?.apply(this, arguments);
                     node.properties[SNAPSHOT_KEY] = text;
                     showSavedPrompt();

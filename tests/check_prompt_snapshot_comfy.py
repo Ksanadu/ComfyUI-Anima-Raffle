@@ -26,6 +26,7 @@ async def main(comfy_root):
     test_server = SimpleNamespace(
         app=web.Application(), routes=web.RouteTableDef(), client_id=None,
         sockets_metadata={}, send_sync=lambda *event: events.append(event),
+        queue_updated=lambda: None,
     )
     server.PromptServer.instance = test_server
     package_root = Path(__file__).resolve().parents[1]
@@ -48,6 +49,8 @@ async def main(comfy_root):
     nodes.NODE_CLASS_MAPPINGS["SnapshotTestImageSource"] = TestImageSource
     executor = execution.PromptExecutor(test_server, execution.CacheType.CLASSIC,
                                         {"ram": 0, "ram_inactive": 0})
+    queue = execution.PromptQueue(test_server)
+    test_server.prompt_queue = queue
     text_a = "picture A, 中文, ^_^, o_o\n  keep whitespace  "
     text_b = "picture B, different prompt"
     images_written = []
@@ -65,9 +68,12 @@ async def main(comfy_root):
             }, "widgets_values": []}]}
             valid, error, outputs, node_errors = await execution.validate_prompt(f"job-{index}", prompt, None)
             assert valid, (error, node_errors)
-            await executor.execute_async(copy.deepcopy(prompt), f"job-{index}", {
+            extra_data = {
                 "client_id": "snapshot-test", "extra_pnginfo": {"workflow": workflow},
-            }, sorted(outputs, reverse=True))
+            }
+            queue.put((index, f"job-{index}", copy.deepcopy(prompt), extra_data, sorted(outputs, reverse=True), {}))
+            item, item_id = queue.get()
+            await executor.execute_async(item[2], item[1], item[3].copy(), item[4])
             assert executor.success, executor.status_messages
             result = executor.history_result["outputs"]
             assert result["3"]["saved_text"] == [text]
@@ -81,6 +87,11 @@ async def main(comfy_root):
                 assert properties["anima_prompt_snapshot"] == text
                 assert properties["anima_prompt_snapshot_request"] == f"job-{index}"
                 images_written.append((file, text))
+            queue.task_done(item_id, executor.history_result, None, lambda item: item[:5])
+            recorded = queue.get_history(f"job-{index}")[f"job-{index}"]
+            history_workflow = recorded["prompt"][3]["extra_pnginfo"]["workflow"]
+            saved_prompt = history_workflow["nodes"][0]["properties"]["anima_prompt_snapshot"]
+            assert saved_prompt == text, "Inactive workflow's task history kept the previous prompt"
         assert len(executions) == 1, "Snapshot must not invalidate cached upstream images"
         assert len({file for file, _ in images_written}) == 6, "Each queue must save a new image with its own record"
         for file, expected in images_written:
@@ -91,7 +102,7 @@ async def main(comfy_root):
         assert {"1", "2"} <= set(cached[-1])
         assert not {"3", "4"}.intersection(cached[-1])
     print("PASS: real ComfyUI executor and Save Image; A/B PNG round-trip, repeated prompt,")
-    print("      two-image batches, cached upstream images and per-job workflow records.")
+    print("      two-image batches, cached upstream images and per-job PNG/task-history records.")
 
 
 if __name__ == "__main__":

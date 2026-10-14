@@ -26,6 +26,36 @@ def find_snapshot_node(workflow, unique_id):
     return None
 
 
+def record_snapshot(workflow, unique_id, text):
+    node = find_snapshot_node(workflow, unique_id)
+    if node is None:
+        return ""
+    properties = node.setdefault("properties", {})
+    properties[SNAPSHOT_KEY] = text
+    return properties.get(REQUEST_KEY, "")
+
+
+def sync_running_workflow(unique_id, text):
+    # PromptQueue keeps a deep copy for /history, separate from the metadata
+    # passed to Save Image. Update that copy while this exact job is executing.
+    try:
+        from comfy_execution.utils import get_executing_context
+        from server import PromptServer
+    except ImportError:
+        return
+    context = get_executing_context()
+    queue = getattr(PromptServer.instance, "prompt_queue", None)
+    if context is None or queue is None:
+        return
+    with queue.mutex:
+        for item in queue.currently_running.values():
+            if item[1] == context.prompt_id:
+                metadata = item[3].get("extra_pnginfo", {})
+                if isinstance(metadata, dict):
+                    record_snapshot(metadata.get("workflow"), unique_id, text)
+                break
+
+
 class PromptSnapshot:
     @classmethod
     def INPUT_TYPES(cls):
@@ -55,11 +85,8 @@ class PromptSnapshot:
     def capture(self, text, images=None, unique_id=None, extra_pnginfo=None):
         request_id = ""
         if isinstance(extra_pnginfo, dict):
-            node = find_snapshot_node(extra_pnginfo.get("workflow"), unique_id)
-            if node is not None:
-                properties = node.setdefault("properties", {})
-                properties[SNAPSHOT_KEY] = text
-                request_id = properties.get(REQUEST_KEY, "")
+            request_id = record_snapshot(extra_pnginfo.get("workflow"), unique_id, text)
+        sync_running_workflow(unique_id, text)
         return {
             "ui": {"saved_text": [text], "snapshot_request": [request_id]},
             "result": (text, images),

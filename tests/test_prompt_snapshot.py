@@ -2,7 +2,11 @@ import copy
 import importlib.util
 import math
 from pathlib import Path
+import sys
+import threading
+import types
 import unittest
+from unittest.mock import patch
 
 
 spec = importlib.util.spec_from_file_location("prompt_snapshot_tests", Path(__file__).resolve().parents[1] / "prompt_snapshot.py")
@@ -70,3 +74,41 @@ class PromptSnapshotTests(unittest.TestCase):
         self.node.capture("nested", unique_id="10:20:3", extra_pnginfo={"workflow": workflow})
         self.assertEqual(workflow["definitions"]["subgraphs"][1]["nodes"][0]["properties"][module.SNAPSHOT_KEY], "nested")
         self.assertIsNone(module.find_snapshot_node(workflow, "10:99:3"))
+
+    def running_queue(self, context):
+        current = copy.deepcopy(self.metadata)
+        unrelated = copy.deepcopy(self.metadata)
+        queue = types.SimpleNamespace(mutex=threading.RLock(), currently_running={
+            0: (0, "job-a", {}, {"extra_pnginfo": current}, []),
+            1: (1, "job-b", {}, {"extra_pnginfo": unrelated}, []),
+        })
+        utils = types.ModuleType("comfy_execution.utils")
+        utils.get_executing_context = lambda: context
+        server = types.ModuleType("server")
+        server.PromptServer = types.SimpleNamespace(instance=types.SimpleNamespace(prompt_queue=queue))
+        return queue, current, unrelated, patch.dict(sys.modules, {
+            "comfy_execution": types.ModuleType("comfy_execution"),
+            "comfy_execution.utils": utils, "server": server,
+        })
+
+    def test_background_job_updates_history_copy_without_touching_another_job(self):
+        _, current, unrelated, modules = self.running_queue(types.SimpleNamespace(prompt_id="job-a"))
+        with modules:
+            self.node.capture("background prompt", unique_id="3", extra_pnginfo=self.metadata)
+        self.assertEqual(current["workflow"]["nodes"][0]["properties"][module.SNAPSHOT_KEY], "background prompt")
+        self.assertNotIn(module.SNAPSHOT_KEY, unrelated["workflow"]["nodes"][0]["properties"])
+        self.assertEqual(current["workflow"]["nodes"][0]["properties"][module.REQUEST_KEY], "job-a")
+
+    def test_missing_execution_context_still_records_png_metadata(self):
+        _, current, _, modules = self.running_queue(None)
+        with modules:
+            self.node.capture("PNG prompt", unique_id="3", extra_pnginfo=self.metadata)
+        self.assertEqual(self.metadata["workflow"]["nodes"][0]["properties"][module.SNAPSHOT_KEY], "PNG prompt")
+        self.assertNotIn(module.SNAPSHOT_KEY, current["workflow"]["nodes"][0]["properties"])
+
+    def test_missing_job_does_not_update_a_different_running_job(self):
+        _, current, unrelated, modules = self.running_queue(types.SimpleNamespace(prompt_id="unknown-job"))
+        with modules:
+            self.node.capture("another request", unique_id="3", extra_pnginfo=self.metadata)
+        for metadata in (current, unrelated):
+            self.assertNotIn(module.SNAPSHOT_KEY, metadata["workflow"]["nodes"][0]["properties"])

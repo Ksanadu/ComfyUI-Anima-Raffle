@@ -18,6 +18,7 @@ function fixture() {
         setDirtyCanvas() {}
     }
     const app = { registerExtension(extension) { this.extension = extension; } };
+    const api = new EventTarget();
     const widgets = {
         STRING(node) {
             const widget = { value: "", options: {}, inputEl: {} };
@@ -25,10 +26,11 @@ function fixture() {
             return { widget };
         },
     };
-    registerPromptSnapshot(app, widgets);
+    registerPromptSnapshot(app, widgets, api);
+    app.extension.setup();
     app.extension.beforeRegisterNodeDef(SnapshotNode, { name: "PromptSnapshot" });
     const node = new SnapshotNode();
-    return { app, node, widget: node.widgets[0] };
+    return { app, api, node, widget: node.widgets[0] };
 }
 
 function queue(node, widget) {
@@ -105,4 +107,40 @@ test("empty saved text is restored and is not replaced by a previous workflow", 
     node.properties = {};
     node.onConfigure();
     assert.equal(widget.value, "");
+});
+
+test("returning to an inactive workflow restores its completed background prompt", () => {
+    const { api, node, widget } = fixture();
+    node.properties = { [SNAPSHOT]: "previous picture", [REQUEST]: "background-job" };
+    api.dispatchEvent(new CustomEvent("executed", { detail: {
+        node: "137", output: { saved_text: ["this picture"], snapshot_request: ["background-job"] },
+    } }));
+    // ComfyUI did not call this inactive node's onExecuted callback.
+    assert.equal(node.executedCalled, undefined);
+    node.onConfigure();
+    assert.equal(widget.value, "this picture");
+    assert.equal(node.properties[SNAPSHOT], "this picture");
+});
+
+test("background results with reused node IDs cannot replace an older image's snapshot", () => {
+    const { api, node, widget } = fixture();
+    api.dispatchEvent(new CustomEvent("executed", { detail: {
+        node: "137", output: { saved_text: ["picture B"], snapshot_request: ["job-b"] },
+    } }));
+    node.properties = { [SNAPSHOT]: "picture A", [REQUEST]: "job-a" };
+    node.onConfigure();
+    assert.equal(widget.value, "picture A");
+    node.properties = { [SNAPSHOT]: "stale B preview", [REQUEST]: "job-b" };
+    node.onConfigure();
+    assert.equal(widget.value, "picture B");
+});
+
+test("unrelated executed output and missing request UUID cannot overwrite saved text", () => {
+    const { api, node, widget } = fixture();
+    for (const output of [{ text: ["other node"] }, { saved_text: ["no job ID"] }]) {
+        api.dispatchEvent(new CustomEvent("executed", { detail: { node: "137", output } }));
+    }
+    node.properties = { [SNAPSHOT]: "recorded prompt", [REQUEST]: "job-a" };
+    node.onConfigure();
+    assert.equal(widget.value, "recorded prompt");
 });

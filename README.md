@@ -6,7 +6,7 @@
 
 An integrated ComfyUI node pack combining Anima Style Explorer and ComfyUI-Raffle, with character sex filters, Auto Cycle, and Anima/SD tag formatting.
 
-整合版本：`1.4.0`。本项目是独立社区 fork，保留原有节点名称和接口。
+整合版本：`1.4.1`。本项目是独立社区 fork，保留原有节点名称和接口。
 
 ## 新增功能
 
@@ -88,7 +88,11 @@ VAE Decode ----(images)--> Prompt Snapshot (Raffle) --(images)--> Save Image
 
 使用保留 ComfyUI 工作流元数据的 PNG；关闭元数据保存或去掉图片元数据后无法恢复。该功能只保存安装后经此节点记录的新图片，无法补回旧图里缺失的提示词。
 
+`1.4.1` 修复切换到其他工作流页签后，出图记录仍显示上一张提示词的问题。后台同步写入 PNG 工作流和 ComfyUI 任务历史的工作流副本；前端按每次排队的独立标识接收后台结果，切回页签时可恢复对应记录。保存与任务历史同步不依赖该工作流是否正在页面上显示。
+
 **Prompt Snapshot (Raffle)** captures the exact received prompt in each image's embedded workflow. Reloading that PNG restores its own read-only text, with no dependence on another workflow's preview cache. Connect the final prompt to `text`, route VAE Decode through the node's `images` input/output into Save Image, and keep PNG workflow metadata enabled. Text and images pass through unchanged.
+
+Version 1.4.1 also updates the workflow copy kept in ComfyUI task history and restores results received while another workflow tab is active. Prompt recording and task-history synchronization run on the server independently of the currently visible tab.
 
 ## 包含的节点
 
@@ -216,7 +220,7 @@ node --test tests/*.test.mjs
 python tests/check_prompt_snapshot_comfy.py /path/to/ComfyUI
 ```
 
-包含七项 Raffle 回归测试、八项 Raffle Character 测试、三项角色分类测试、三项前端标签格式测试、九项历史清空与接口测试、五项清空按钮测试，以及七项提示词快照测试和六项快照恢复测试。清空测试只使用临时文件，覆盖删除范围、缓存失效、并发出图、请求授权和前端预览更新。快照还使用真实 ComfyUI 执行器与 Save Image 验证连续出图、缓存命中和 PNG 元数据回读。验证未执行完整模型出图。
+包含七项 Raffle 回归测试、八项 Raffle Character 测试、三项角色分类测试、三项前端标签格式测试、九项历史清空与接口测试、五项清空按钮测试，以及十项提示词快照测试和九项快照恢复测试。清空测试只使用临时文件，覆盖删除范围、缓存失效、并发出图、请求授权和前端预览更新。快照还使用真实 ComfyUI 执行器、PromptQueue 与 Save Image 验证连续出图、缓存命中、PNG 元数据回读，以及不依赖前端显示的任务历史记录。验证未执行完整模型出图。
 
 ## 来源与致谢
 
