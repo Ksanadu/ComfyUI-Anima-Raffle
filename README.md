@@ -1,7 +1,5 @@
 # ComfyUI-Anima-Raffle
 
-![Anima Style Explorer](assets/banner.jpg)
-
 将 [Anima Style Explorer](https://github.com/fulletLab/comfyui-anima-style-nodes) 与 [ComfyUI-Raffle](https://github.com/rainlizard/ComfyUI-Raffle) 整合为一个 ComfyUI 节点包，提供风格与角色浏览、Auto Cycle 轮换、角色与艺术家抽签及 Anima/SD 标签格式切换。
 
 An integrated ComfyUI node pack combining Anima Style Explorer and ComfyUI-Raffle, with artist and character raffles, character sex filters, Auto Cycle, and Anima/SD tag formatting.
