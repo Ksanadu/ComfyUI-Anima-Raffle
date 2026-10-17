@@ -4,7 +4,7 @@
 
 An integrated ComfyUI node pack combining Anima Style Explorer and ComfyUI-Raffle, with artist and character raffles, character sex filters, Auto Cycle, and Anima/SD tag formatting.
 
-整合版本：`1.6.1`。本项目是独立社区 fork，保留原有节点名称和接口。
+整合版本：`1.6.2`。本项目是独立社区 fork，保留原有节点类型标识和接口。
 
 ## 新增功能
 
@@ -22,9 +22,13 @@ Characters 页签在排序选项（Popularity、Uniqueness、A - Z）右侧提�
 
 浏览器与 Auto Cycle 的筛选可分别设置。Auto Cycle 的筛选同时适用于 `Characters only` 和 `Styles + Characters`；`Styles only` 不受影响。循环过程中切换分类，下一轮会从新的角色池抽取，并替换上一轮的角色标签。
 
-### 2. Raffle：Anima / SD 标签格式
+### 2. Raffle Scene：Anima / SD 标签格式
 
-Raffle 主面板新增 `tag_form` 下拉菜单：
+**Raffle Scene** 主面板提供 `tag_form` 下拉菜单：
+
+`1.6.2` 将原 **Raffle** 节点的显示名称改为 **Raffle Scene**，位于 **Anima Raffle** 分类。内部类型标识仍为 `Raffle`，已有工作流可继续加载。
+
+Since version 1.6.2, the original Raffle node is displayed as **Raffle Scene** under **Anima Raffle**. Its internal `Raffle` identifier is retained for existing workflows.
 
 | 选项 | 示例 | 行为 |
 | --- | --- | --- |
@@ -128,7 +132,7 @@ Sequential 模式中，`seed = 0` 取第一组，`seed = 1` 取下一组，到�
 
 洗牌遍历时，保持 **shuffle_seed 固定**，让 **seed 递增**，即可连续遍历同一份随机排列，一轮内不重复，到末尾后循环。修改 shuffle_seed 才会生成另一份排列；仅切换升降序会反转同一份排列。重新打开工作流时，相同索引和设置可复现同一位置。
 
-可将 Raffle Artist 的输出与 Raffle、Raffle Character 的输出交给文本拼接节点，再送入 CLIP Text Encode。
+可将 Raffle Artist 的输出与 Raffle Scene、Raffle Character 的输出交给文本拼接节点，再送入 CLIP Text Encode。
 
 **Raffle Artist** draws 1–6 distinct artists per run from the shared local artist index. Choose Random for seeded sampling or Sequential for batches with wraparound. Version 1.6.0 adds Popularity, Uniqueness, A–Z, and Shuffle ordering, each with Ascending and Descending directions. Popularity uses local work counts and Uniqueness uses local scores; missing metrics stay last and ties use A–Z names. Shuffle uses a separate fixed `shuffle_seed`; Descending reverses the same permutation. Keep `shuffle_seed` fixed and set the main seed's **control_after_generate** to **increment** to traverse consecutive batches without reshuffling. Sorting controls affect Sequential only; defaults preserve existing A–Z workflows. Anima outputs `@artist name`; SD outputs `artist_name` without `@`. The three outputs remain Raffled output, Unfiltered, and Debug info.
 
@@ -148,7 +152,7 @@ Sequential 模式中，`seed = 0` 取第一组，`seed = 1` 取下一组，到�
 | --- | --- | --- |
 | Anima Style Explorer | `CONDITIONING` | 浏览风格与角色，并用 CLIP 编码提示词 |
 | Anima Style Explorer (Text) | `STRING` | 浏览与编辑提示词，直接输出文本 |
-| Raffle | 三个 `STRING` | 输出筛选后的标签、未筛选标签和调试信息 |
+| Raffle Scene | 三个 `STRING` | 输出筛选后的场景标签、未筛选标签和调试信息 |
 | Raffle Character | 三个 `STRING` | 按标签和性别抽取角色，可输出 trigger + tags 或仅 trigger |
 | Raffle Artist | 三个 `STRING` | 顺序或随机抽取 1–6 位艺术家，支持四种升降序排列与 Anima / SD 格式 |
 | Preview History (Raffle) | 图片预览界面 | 保存并显示最近生成的图片，支持一键清空共用历史 |
@@ -156,9 +160,9 @@ Sequential 模式中，`seed = 0` 取第一组，`seed = 1` 取下一组，到�
 | Tag Category Strength (Raffle) | 两个 `STRING` | 按标签类别调整权重，输出标签和调试信息 |
 | Curved Rescale CFG (Raffle) | `MODEL` | 为模型应用曲线 CFG 重缩放 |
 
-从 `1.6.1` 起，以上九个节点统一位于右键添加节点菜单的 **Anima Raffle** 分类，包含两个 Anima Style Explorer 节点、Raffle、角色与艺术家抽签、历史预览、提示词快照、标签权重与 CFG 节点。节点名称、接口及已有工作流保持兼容。
+从 `1.6.1` 起，以上九个节点统一位于右键添加节点菜单的 **Anima Raffle** 分类，包含两个 Anima Style Explorer 节点、Raffle Scene、角色与艺术家抽签、历史预览、提示词快照、标签权重与 CFG 节点。节点类型标识、接口及已有工作流保持兼容。
 
-Since version 1.6.1, all nine nodes appear together under **Anima Raffle** in ComfyUI's Add Node menu. Node names and interfaces remain compatible with existing workflows.
+Since version 1.6.1, all nine nodes appear together under **Anima Raffle** in ComfyUI's Add Node menu. Node identifiers and interfaces remain compatible with existing workflows.
 
 ## 安装
 
@@ -178,7 +182,7 @@ python -m pip install -r requirements.txt
 
 然后重启 ComfyUI，并刷新浏览器页面以加载前端更新。
 
-本包使用原版节点的注册名称和 `/anima` 路由。安装整合包时，将原版 `comfyui-anima-style-nodes`、`ComfyUI-Raffle` 及此前安装的整合包移出 `custom_nodes`，避免重复加载。已有工作流继续使用原有节点名称。
+本包使用原版节点的类型标识和 `/anima` 路由。安装整合包时，将原版 `comfyui-anima-style-nodes`、`ComfyUI-Raffle` 及此前安装的整合包移出 `custom_nodes`，避免重复加载。已有工作流继续使用原有节点类型标识。
 
 ### 从此前的 fork 更新
 
@@ -199,16 +203,16 @@ CheckpointLoader --(clip)--> Anima Style Explorer --(conditioning)--> KSampler
 
 在节点内编辑提示词，打开 `Style Browser`，选择风格或角色。角色卡片支持 `Trigger` 和 `Trigger + tags`，艺术家标签保持 `@artist` 格式。
 
-### 纯文本节点与 Raffle 组合
+### 纯文本节点与 Raffle Scene 组合
 
 ```text
 Anima Style Explorer (Text) --(text)----\
                                        文本拼接节点 --> CLIP Text Encode --> KSampler
-Raffle --(Raffled output)--------------/                      ^
+Raffle Scene --(Raffled output)--------/                      ^
 CheckpointLoader ---------------------------(clip)----------|
 ```
 
-文本拼接节点由你的工作流提供。使用 Anima 时将 Raffle 的 `tag_form` 设为 **Anima**；需要下划线标签时设为 **SD**。Raffle 的 `negative_prompt` 可连接负面提示词字符串，用于从最终输出中移除相应标签。
+文本拼接节点由你的工作流提供。使用 Anima 时将 Raffle Scene 的 `tag_form` 设为 **Anima**；需要下划线标签时设为 **SD**。Raffle Scene 的 `negative_prompt` 可连接负面提示词字符串，用于从最终输出中移除相应标签。
 
 ### Auto Cycle
 
@@ -225,7 +229,7 @@ CheckpointLoader ---------------------------(clip)----------|
 
 点击 Play 开始排队，点击 Stop 停止后续循环排队。风格标签与角色标签分别管理。
 
-### Raffle 筛选
+### Raffle Scene 筛选
 
 `use_general`、`use_questionable`、`use_sensitive` 和 `use_explicit` 控制参与抽取的内置标签列表。
 
@@ -239,7 +243,7 @@ Raffle Character --(Raffled output)--> CLIP Text Encode --(conditioning)--> KSam
 CheckpointLoader ----------------(clip)----|
 ```
 
-也可以将输出与 Raffle 的场景标签或其他提示词用文本拼接节点组合后再编码。Raffle Character 的 `filter_out_tags` 排除整个角色，原 Raffle 的同名控件只移除最终输出标签。
+也可以将输出与 Raffle Scene 的场景标签或其他提示词用文本拼接节点组合后再编码。Raffle Character 的 `filter_out_tags` 排除整个角色，Raffle Scene 的同名控件只移除最终输出标签。
 
 ## 保留的原版功能
 
