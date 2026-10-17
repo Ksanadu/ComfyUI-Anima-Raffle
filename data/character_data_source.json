@@ -1,0 +1,20 @@
+{
+  "description": "Official Animadex offline character CSV export; text metadata only, no images downloaded",
+  "catalogue_version": "1780120177",
+  "downloaded_at": "2026-10-17T11:13:25+08:00",
+  "source_url": "https://animadex.net/api/export/manifest",
+  "character_rows": 36492,
+  "previous_characters": 34301,
+  "added_characters": 2199,
+  "removed_characters": 8,
+  "preserved_artists": 15879,
+  "source_csv_sha256": "0cbd776d5571522bee5ccd9ae7c4fdc1aa74004c16b439eab1193dfbcf939502",
+  "character_sex": {
+    "Female": 22720,
+    "Male": 4649,
+    "Others": 9123
+  },
+  "with_description_tags": 28813,
+  "without_description_tags": 7679,
+  "images_downloaded": 0
+}

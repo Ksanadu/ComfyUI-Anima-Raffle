@@ -6,7 +6,7 @@
 
 An integrated ComfyUI node pack combining Anima Style Explorer and ComfyUI-Raffle, with character sex filters, Auto Cycle, and Anima/SD tag formatting.
 
-整合版本：`1.4.1`。本项目是独立社区 fork，保留原有节点名称和接口。
+整合版本：`1.4.2`。本项目是独立社区 fork，保留原有节点名称和接口。
 
 ## 新增功能
 
@@ -93,6 +93,16 @@ VAE Decode ----(images)--> Prompt Snapshot (Raffle) --(images)--> Save Image
 **Prompt Snapshot (Raffle)** captures the exact received prompt in each image's embedded workflow. Reloading that PNG restores its own read-only text, with no dependence on another workflow's preview cache. Connect the final prompt to `text`, route VAE Decode through the node's `images` input/output into Save Image, and keep PNG workflow metadata enabled. Text and images pass through unchanged.
 
 Version 1.4.1 also updates the workflow copy kept in ComfyUI task history and restores results received while another workflow tab is active. Prompt recording and task-history synchronization run on the server independently of the currently visible tab.
+
+## 本地角色文本数据
+
+角色名称、trigger、描述 tags、作品系列和数量统计已保存在本地 `data/animadex_index.json`。**Characters 浏览、Character Sex 筛选、Auto Cycle 角色轮换和 Raffle Character 抽取均直接读取本地文本，不需要连接 Animadex。**
+
+`1.4.2` 于 **2026-10-17** 导入官网当前提供的官方角色 CSV（导出版本 `1780120177`），共 **36,492 条角色**；按 trigger + tags 分类为 Female **22,720**、Male **4,649**、Others **9,123**。相比旧库新增 2,199 条、移除 8 条旧记录，并保留 15,879 条艺术家记录。来源与校验信息见 `data/character_data_source.json`。
+
+本次只下载文本数据。角色预览图片不是离线文本抽取的必需项；原有预览地址保留，新角色未额外下载预览。7,679 条官方记录未提供描述 tags，保留其 trigger，不自动编造标签。更新数据后，既有 seed 对应的抽取结果可能随角色池变化。
+
+36,492 character records are bundled locally from the official Animadex CSV export downloaded on 2026-10-17. Character browsing, sex/tag filtering, Auto Cycle, and Raffle Character work offline. This update downloads text only and preserves the existing artist index. See `data/character_data_source.json` for provenance.
 
 ## 包含的节点
 
