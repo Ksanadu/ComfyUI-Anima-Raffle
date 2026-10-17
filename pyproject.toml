@@ -1,7 +1,7 @@
 [project]
 name = "comfyui-anima-raffle"
 description = "Integrated Anima Style Explorer and ComfyUI-Raffle nodes with artist and character raffle, sex and tag filters, Auto Cycle, and Anima/SD tag formatting."
-version = "1.6.0"
+version = "1.6.1"
 dependencies = ["aiohttp"]
 authors = [{ name = "fulletlab" }, { name = "rainlizard" }]
 maintainers = [{ name = "Ksanadu" }]

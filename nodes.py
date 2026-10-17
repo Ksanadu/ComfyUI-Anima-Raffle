@@ -3,7 +3,7 @@ import sys
 
 class AnimaStyleExplorer(nodes.CLIPTextEncode):
 
-    CATEGORY = "Anima"
+    CATEGORY = "Anima Raffle"
     
     @classmethod
     def INPUT_TYPES(cls):
@@ -19,7 +19,7 @@ class AnimaStyleExplorer(nodes.CLIPTextEncode):
     
 class AnimaStyleExplorerText:
 
-    CATEGORY = "Anima"
+    CATEGORY = "Anima Raffle"
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("text",)
     FUNCTION = "execute"

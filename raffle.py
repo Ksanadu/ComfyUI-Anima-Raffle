@@ -140,7 +140,7 @@ class Raffle:
             }
         }
 
-    CATEGORY = "Raffle"
+    CATEGORY = "Anima Raffle"
     RETURN_TYPES = ("STRING", "STRING", "STRING")
     RETURN_NAMES = ("Raffled output", "Unfiltered", "Debug info")
     OUTPUT_TOOLTIPS = (

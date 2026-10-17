@@ -6,7 +6,7 @@
 
 An integrated ComfyUI node pack combining Anima Style Explorer and ComfyUI-Raffle, with artist and character raffles, character sex filters, Auto Cycle, and Anima/SD tag formatting.
 
-整合版本：`1.6.0`。本项目是独立社区 fork，保留原有节点名称和接口。
+整合版本：`1.6.1`。本项目是独立社区 fork，保留原有节点名称和接口。
 
 ## 新增功能
 
@@ -45,7 +45,7 @@ Raffle 主面板新增 `tag_form` 下拉菜单：
 
 ### 4. Raffle Character
 
-在 `Raffle` 分类中新增 **Raffle Character**，直接从 Anima Style Explorer 的 Animadex 角色索引抽取角色，不需要连接输入节点。主面板提供六项控件：
+在 `Anima Raffle` 分类中提供 **Raffle Character**，直接从 Anima Style Explorer 的 Animadex 角色索引抽取角色，不需要连接输入节点。主面板提供六项控件：
 
 | 控件 | 默认值 | 行为 |
 | --- | --- | --- |
@@ -101,7 +101,7 @@ Version 1.4.1 also updates the workflow copy kept in ComfyUI task history and re
 
 ### 7. Raffle Artist
 
-`1.5.0` 在 `Raffle` 分类中新增 **Raffle Artist**，共用 Anima Style Explorer 的本地 Theta 与 Animadex 艺术家索引，自动去重并排除角色记录，无需联网或连接输入节点。
+`1.5.0` 新增的 **Raffle Artist** 现位于 `Anima Raffle` 分类，共用 Anima Style Explorer 的本地 Theta 与 Animadex 艺术家索引，自动去重并排除角色记录，无需联网或连接输入节点。
 
 | 控件 | 默认值 | 行为 |
 | --- | --- | --- |
@@ -158,7 +158,9 @@ Sequential 模式中，`seed = 0` 取第一组，`seed = 1` 取下一组，到�
 | Tag Category Strength (Raffle) | 两个 `STRING` | 按标签类别调整权重，输出标签和调试信息 |
 | Curved Rescale CFG (Raffle) | `MODEL` | 为模型应用曲线 CFG 重缩放 |
 
-Anima 节点位于 `Anima` 分类；Raffle、预览和权重节点位于 `Raffle` 相关分类，CFG 节点位于 `advanced/model`。
+从 `1.6.1` 起，以上九个节点统一位于右键添加节点菜单的 **Anima Raffle** 分类，包含两个 Anima Style Explorer 节点、Raffle、角色与艺术家抽签、历史预览、提示词快照、标签权重与 CFG 节点。节点名称、接口及已有工作流保持兼容。
+
+Since version 1.6.1, all nine nodes appear together under **Anima Raffle** in ComfyUI's Add Node menu. Node names and interfaces remain compatible with existing workflows.
 
 ## 安装
 

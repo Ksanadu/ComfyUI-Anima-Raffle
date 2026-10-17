@@ -74,7 +74,7 @@ class PromptSnapshot:
     RETURN_NAMES = ("text", "images")
     FUNCTION = "capture"
     OUTPUT_NODE = True
-    CATEGORY = "Raffle/Previews"
+    CATEGORY = "Anima Raffle"
     DESCRIPTION = "Records the received text in the image workflow. Connect the images output to Save Image to ensure capture happens before saving."
 
     @classmethod

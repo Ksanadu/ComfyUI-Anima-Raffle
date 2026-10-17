@@ -11,7 +11,7 @@ class CurvedRescaleCFG:
     RETURN_TYPES = ("MODEL",)
     FUNCTION = "patch"
 
-    CATEGORY = "advanced/model"
+    CATEGORY = "Anima Raffle"
 
     def patch(self, model, multiplier, curve_peak_position, curve_sharpness):
         def rescale_cfg_advanced_wrapper(args):

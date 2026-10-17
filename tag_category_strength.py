@@ -29,7 +29,7 @@ class TagCategoryStrength:
             }
         }
 
-    CATEGORY = "Raffle"
+    CATEGORY = "Anima Raffle"
     RETURN_TYPES = ("STRING", "STRING")
     RETURN_NAMES = ("Adjusted tags", "Debug info")
     OUTPUT_TOOLTIPS = (
@@ -220,4 +220,4 @@ class TagCategoryStrength:
         # Create debug output
         debug_output = f"Applied adjustments: {adjustments}\n\nTag adjustments:\n" + "\n".join(debug_info)
         
-        return ", ".join(adjusted_tags), debug_output 
+        return ", ".join(adjusted_tags), debug_output

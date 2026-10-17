@@ -63,7 +63,7 @@ class PreviewHistory:
     RETURN_TYPES = ()
     FUNCTION = "execute"
     OUTPUT_NODE = True
-    CATEGORY = "Raffle/Previews"
+    CATEGORY = "Anima Raffle"
 
     @classmethod
     def IS_CHANGED(cls, image, history_size):
