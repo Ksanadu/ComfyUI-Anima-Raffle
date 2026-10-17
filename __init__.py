@@ -1,6 +1,7 @@
 from .nodes import NODE_CLASS_MAPPINGS as ANIMA_NODE_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS as ANIMA_DISPLAY_NAME_MAPPINGS
 from .raffle import NODE_CLASS_MAPPINGS as RAFFLE_NODE_MAPPINGS, NODE_DISPLAY_NAME_MAPPINGS as RAFFLE_DISPLAY_NAME_MAPPINGS
 from .raffle_character import RaffleCharacter
+from .raffle_artist import RaffleArtist
 from .preview_history import PreviewHistory
 from .prompt_snapshot import PromptSnapshot
 from .tag_category_strength import TagCategoryStrength
@@ -10,6 +11,7 @@ NODE_CLASS_MAPPINGS = {
     **ANIMA_NODE_MAPPINGS,
     **RAFFLE_NODE_MAPPINGS,
     "RaffleCharacter": RaffleCharacter,
+    "RaffleArtist": RaffleArtist,
     "PreviewHistory": PreviewHistory,
     "PromptSnapshot": PromptSnapshot,
     "TagCategoryStrength": TagCategoryStrength,
@@ -20,6 +22,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     **ANIMA_DISPLAY_NAME_MAPPINGS,
     **RAFFLE_DISPLAY_NAME_MAPPINGS,
     "RaffleCharacter": "Raffle Character",
+    "RaffleArtist": "Raffle Artist",
     "PreviewHistory": "Preview History (Raffle)",
     "PromptSnapshot": "Prompt Snapshot (Raffle)",
     "TagCategoryStrength": "Tag Category Strength (Raffle)",

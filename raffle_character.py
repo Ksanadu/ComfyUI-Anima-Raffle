@@ -36,22 +36,28 @@ class RaffleCharacter(Raffle):
                 }),
                 "tag_form": (["Anima", "SD"], {"default": "Anima"}),
                 "character_sex": (["Female", "Male", "Others"], {"default": "Female"}),
+                "output_mode": (["trigger+tags", "trigger"], {
+                    "default": "trigger+tags",
+                    "tooltip": "Choose the output text only. Both modes filter characters using their complete trigger + tags.",
+                }),
             },
         }
 
     OUTPUT_TOOLTIPS = (
-        "The selected character's complete trigger + tags in the chosen tag format",
-        "The same complete trigger + tags; exclusions filter characters before drawing",
+        "The selected character's trigger + tags or trigger only, in the chosen tag format",
+        "The same selected text; exclusions filter characters before drawing",
         "Data source, matching pool size, seed, filters and selected character",
     )
 
     def process_tags(self, taglists_must_include="", filter_out_tags="", seed=0,
-                     tag_form="Anima", character_sex="Female"):
+                     tag_form="Anima", character_sex="Female", output_mode="trigger+tags"):
         sex = character_sex.strip().lower()
         if sex not in ("female", "male", "others"):
             raise ValueError(f"Unknown Character Sex: {character_sex}")
         if tag_form not in ("Anima", "SD"):
             raise ValueError(f"Unknown tag form: {tag_form}")
+        if output_mode not in ("trigger+tags", "trigger"):
+            raise ValueError(f"Unknown character output mode: {output_mode}")
 
         required = {_tag_key(tag) for tag in self.normalize_tags(taglists_must_include)}
         excluded = {_tag_key(tag) for tag in self.normalize_tags(filter_out_tags)}
@@ -79,6 +85,8 @@ class RaffleCharacter(Raffle):
             )
 
         character, tags = random.Random(seed).choice(candidates)
+        if output_mode == "trigger":
+            tags = self.normalize_tags(character.get("trigger") or character.get("tag") or "")
         if tag_form == "Anima":
             tags = [format_anima_tag(tag) for tag in tags]
         output = ", ".join(tags)
@@ -87,6 +95,7 @@ class RaffleCharacter(Raffle):
             f"Character index size: {len(characters)}\n"
             f"Matching character pool size: {len(candidates)}\n"
             f"Character Sex: {character_sex}\n"
+            f"Output mode: {output_mode}\n"
             f"Seed: {seed}\n"
             f"Selected character: {character.get('trigger') or character.get('tag')}\n"
             f"Must include: {taglists_must_include or '(none)'}\n"

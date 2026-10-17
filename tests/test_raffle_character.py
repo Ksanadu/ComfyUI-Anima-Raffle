@@ -41,11 +41,15 @@ class RaffleCharacterTests(unittest.TestCase):
         self.assertEqual(set(schema), {"required"})
         self.assertEqual(set(schema["required"]), {
             "seed", "taglists_must_include", "filter_out_tags", "tag_form", "character_sex",
+            "output_mode",
         })
         self.assertEqual(schema["required"]["taglists_must_include"][1]["default"], "")
         self.assertEqual(schema["required"]["filter_out_tags"][1]["default"], "")
         self.assertEqual(schema["required"]["character_sex"][1]["default"], "Female")
         self.assertEqual(schema["required"]["tag_form"][1]["default"], "Anima")
+        self.assertEqual(schema["required"]["output_mode"][0], ["trigger+tags", "trigger"])
+        self.assertEqual(schema["required"]["output_mode"][1]["default"], "trigger+tags")
+        self.assertEqual(list(schema["required"])[-1], "output_mode")
         self.assertEqual(self.node.RETURN_NAMES, ("Raffled output", "Unfiltered", "Debug info"))
 
     def test_all_required_tags_match_trigger_and_descriptions(self):
@@ -95,6 +99,41 @@ class RaffleCharacterTests(unittest.TestCase):
     def test_emoticon_exclusion_is_applied_before_drawing(self):
         with self.assertRaisesRegex(ValueError, "No matching"):
             self.node.process_tags(taglists_must_include="touhou, blue eyes", filter_out_tags="o_o")
+
+    def test_trigger_only_keeps_description_filters_and_selected_character(self):
+        kwargs = dict(seed=123, taglists_must_include="touhou, blue eyes", filter_out_tags="red eyes")
+        complete = self.node.process_tags(**kwargs)
+        trigger, unfiltered, debug = self.node.process_tags(**kwargs, output_mode="trigger")
+        self.assertEqual(trigger, "alice, touhou")
+        self.assertEqual(unfiltered, trigger)
+        self.assertTrue(complete[0].startswith(trigger + ", "))
+        self.assertIn("Matching character pool size: 1", debug)
+        self.assertIn("Selected character: alice, touhou", debug)
+        self.assertIn("Output mode: trigger", debug)
+        with self.assertRaisesRegex(ValueError, "No matching"):
+            self.node.process_tags(**{**kwargs, "filter_out_tags": "long hair"}, output_mode="trigger")
+
+    def test_trigger_only_preserves_seed_selection_for_all_sex_pools(self):
+        for sex in ("Female", "Male", "Others"):
+            for seed in range(8):
+                with self.subTest(sex=sex, seed=seed):
+                    full = self.node.process_tags(seed=seed, character_sex=sex)
+                    trigger = self.node.process_tags(seed=seed, character_sex=sex, output_mode="trigger")
+                    self.assertEqual(full[2].replace("Output mode: trigger+tags", "Output mode: trigger"), trigger[2])
+                    self.assertTrue(full[0].startswith(trigger[0]))
+
+    def test_trigger_only_formats_every_trigger_tag_without_descriptions(self):
+        self.source.return_value = [{"tag": "alice_margatroid, touhou, ^_^", "tags": ["1girl", "blue eyes"]}]
+        kwargs = dict(taglists_must_include="blue eyes", output_mode="trigger")
+        anima = self.node.process_tags(**kwargs)
+        sd = self.node.process_tags(**kwargs, tag_form="SD")
+        self.assertEqual(anima[:2], ("alice margatroid, touhou, ^_^",) * 2)
+        self.assertEqual(sd[:2], ("alice_margatroid, touhou, ^_^",) * 2)
+        self.assertEqual(anima[2], sd[2])
+
+    def test_unknown_output_mode_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "Unknown character output mode"):
+            self.node.process_tags(output_mode="tags")
 
     def test_empty_source_and_conflicting_filters_do_not_fall_back(self):
         with self.assertRaisesRegex(ValueError, "No matching"):

@@ -2,11 +2,11 @@
 
 ![Anima Style Explorer](assets/banner.jpg)
 
-将 [Anima Style Explorer](https://github.com/fulletLab/comfyui-anima-style-nodes) 与 [ComfyUI-Raffle](https://github.com/rainlizard/ComfyUI-Raffle) 整合为一个 ComfyUI 节点包，提供风格与角色浏览、Auto Cycle 轮换、标签抽签及 Anima/SD 标签格式切换。
+将 [Anima Style Explorer](https://github.com/fulletLab/comfyui-anima-style-nodes) 与 [ComfyUI-Raffle](https://github.com/rainlizard/ComfyUI-Raffle) 整合为一个 ComfyUI 节点包，提供风格与角色浏览、Auto Cycle 轮换、角色与艺术家抽签及 Anima/SD 标签格式切换。
 
-An integrated ComfyUI node pack combining Anima Style Explorer and ComfyUI-Raffle, with character sex filters, Auto Cycle, and Anima/SD tag formatting.
+An integrated ComfyUI node pack combining Anima Style Explorer and ComfyUI-Raffle, with artist and character raffles, character sex filters, Auto Cycle, and Anima/SD tag formatting.
 
-整合版本：`1.4.2`。本项目是独立社区 fork，保留原有节点名称和接口。
+整合版本：`1.5.0`。本项目是独立社区 fork，保留原有节点名称和接口。
 
 ## 新增功能
 
@@ -45,7 +45,7 @@ Raffle 主面板新增 `tag_form` 下拉菜单：
 
 ### 4. Raffle Character
 
-在 `Raffle` 分类中新增 **Raffle Character**，直接从 Anima Style Explorer 的 Animadex 角色索引抽取角色，不需要连接输入节点。主面板仅保留五项控件：
+在 `Raffle` 分类中新增 **Raffle Character**，直接从 Anima Style Explorer 的 Animadex 角色索引抽取角色，不需要连接输入节点。主面板提供六项控件：
 
 | 控件 | 默认值 | 行为 |
 | --- | --- | --- |
@@ -54,12 +54,17 @@ Raffle 主面板新增 `tag_form` 下拉菜单：
 | filter_out_tags | 空 | 角色包含任一指定标签时，排除整个角色 |
 | tag_form | Anima | Anima 输出空格标签，SD 输出下划线标签；颜文字保留原样 |
 | character_sex | Female | Female、Male、Others，分类规则与浏览器和 Auto Cycle 一致 |
+| output_mode | trigger+tags | `trigger+tags` 输出完整提示词；`trigger` 只输出角色 trigger |
 
 两个输入框使用逗号或换行分隔标签，支持默认的空格写法，也兼容下划线写法及大小写差异。例如 `taglists_must_include` 填入 `touhou, blue eyes`，只会抽取完整 trigger + tags 同时包含 `touhou` 和 `blue eyes` 的角色。`filter_out_tags` 填入 `red eyes, long hair`，会排除包含其中任一标签的角色。
 
 两框均为空时，从当前 Character Sex 对应的角色池随机抽取。默认 Female 并不包含 Male 或 Others。
 
-保留三个输出口：**Raffled output** 和 **Unfiltered** 都输出抽中角色的完整 **trigger + tags**，按 `tag_form` 格式化。两者相同，因为此节点的标签条件用于筛选角色，不用于删减抽中角色的标签。**Debug info** 显示角色索引数量、候选池数量、种子、条件和抽中角色。
+保留三个输出口：**Raffled output** 和 **Unfiltered** 都输出 `output_mode` 选定的内容，按 `tag_form` 格式化。两者相同，因为此节点的标签条件用于筛选角色。**Debug info** 显示角色索引数量、候选池数量、种子、条件、输出模式和抽中角色。
+
+`1.5.0` 新增的 `output_mode` 默认保持完整 **trigger + tags**，兼容已有工作流。选择 `trigger` 时，仍用完整 trigger + tags 检查性别、必需标签和排除标签，抽取结果不变，只减少输出内容。trigger 自身含有的作品名等逗号分隔内容会完整保留。例如 `touhou, blue eyes` 仍可筛选东方蓝眼角色，但输出中只保留该角色原有的 trigger。
+
+**Raffle Character** offers `trigger+tags` (default) and `trigger` output modes. Both modes use the full trigger + tags for sex and tag filtering and select the same character for the same seed. Trigger mode outputs only the complete original trigger, formatted for Anima or SD.
 
 角色数据与 Characters 页签共用本地索引。可在该页签使用 Update Styles 更新角色索引，再改变 seed 重新抽取。没有匹配角色时，节点会提示调整条件，不会绕过筛选条件抽取其他角色。
 
@@ -94,6 +99,25 @@ VAE Decode ----(images)--> Prompt Snapshot (Raffle) --(images)--> Save Image
 
 Version 1.4.1 also updates the workflow copy kept in ComfyUI task history and restores results received while another workflow tab is active. Prompt recording and task-history synchronization run on the server independently of the currently visible tab.
 
+### 7. Raffle Artist
+
+`1.5.0` 在 `Raffle` 分类中新增 **Raffle Artist**，共用 Anima Style Explorer 的本地 Theta 与 Animadex 艺术家索引，自动去重并排除角色记录，无需联网或连接输入节点。
+
+| 控件 | 默认值 | 行为 |
+| --- | --- | --- |
+| seed | `0` | Random 的随机种子；Sequential 的组序号，从 0 开始 |
+| mode | Random | `Random` 随机抽取；`Sequential` 按艺术家标签 A–Z 顺序分组抽取 |
+| artist_count | `1` | 每次抽取 1–6 位不同的艺术家 |
+| tag_form | Anima | Anima 输出 `@artist name`；SD 输出 `artist_name`，不加 `@` |
+
+保留 **Raffled output**、**Unfiltered** 和 **Debug info** 三个输出口。前两项均为逗号分隔的艺术家标签；第三项显示本地艺术家池数量、模式、种子、数量与抽中名单。切换 Anima / SD 只改变格式，不改变抽中的艺术家。
+
+Sequential 模式中，`seed = 0` 取第一组，`seed = 1` 取下一组，到末尾自动绕回开头。例如每次取 2 位时，依次取第 1–2、3–4、5–6 位。将 seed 的 **control_after_generate** 设为 **increment**，即可每次运行自动轮换下一组。Random 模式设为 **randomize** 可持续随机抽取，设为 **fixed** 可复现同一结果。单次抽取不会重复艺术家；跨次抽取可以再次遇到同一位艺术家。更新索引或修改数量后，同一 seed 对应的结果可能改变。
+
+可将 Raffle Artist 的输出与 Raffle、Raffle Character 的输出交给文本拼接节点，再送入 CLIP Text Encode。
+
+**Raffle Artist** draws 1–6 distinct artists per run from the shared local artist index. Choose Random for seeded sampling or Sequential for batches in A–Z tag order with wraparound. In Sequential mode, each seed increment advances one whole batch; set **control_after_generate** to **increment** for automatic cycling. Anima outputs `@artist name`; SD outputs `artist_name` without `@`. The three outputs remain Raffled output, Unfiltered, and Debug info.
+
 ## 本地角色文本数据
 
 角色名称、trigger、描述 tags、作品系列和数量统计已保存在本地 `data/animadex_index.json`。**Characters 浏览、Character Sex 筛选、Auto Cycle 角色轮换和 Raffle Character 抽取均直接读取本地文本，不需要连接 Animadex。**
@@ -111,7 +135,8 @@ Version 1.4.1 also updates the workflow copy kept in ComfyUI task history and re
 | Anima Style Explorer | `CONDITIONING` | 浏览风格与角色，并用 CLIP 编码提示词 |
 | Anima Style Explorer (Text) | `STRING` | 浏览与编辑提示词，直接输出文本 |
 | Raffle | 三个 `STRING` | 输出筛选后的标签、未筛选标签和调试信息 |
-| Raffle Character | 三个 `STRING` | 按标签和性别抽取角色，输出完整 trigger + tags 及调试信息 |
+| Raffle Character | 三个 `STRING` | 按标签和性别抽取角色，可输出 trigger + tags 或仅 trigger |
+| Raffle Artist | 三个 `STRING` | 顺序或随机抽取 1–6 位艺术家，支持 Anima / SD 格式 |
 | Preview History (Raffle) | 图片预览界面 | 保存并显示最近生成的图片，支持一键清空共用历史 |
 | Prompt Snapshot (Raffle) | `STRING`、`IMAGE` | 随图片工作流保存提示词，重新打开图片时恢复只读显示 |
 | Tag Category Strength (Raffle) | 两个 `STRING` | 按标签类别调整权重，输出标签和调试信息 |
@@ -215,7 +240,7 @@ CheckpointLoader ----------------(clip)----|
 
 本次整合修复了 Raffle 字符串断行造成的 Python 语法错误，补齐六个节点的注册、`WEB_DIRECTORY` 和实际路由注册调用，并让纯文本节点在修改标题后仍能获得前端控件。
 
-验证包括真实 ComfyUI 加载器、八个节点输入定义、前端资源注册、本机路由、实际 Raffle 与角色索引数据，以及历史预览、类别权重与 CFG 的基本执行。浏览器中验证了三类角色筛选和 Auto Cycle 的角色替换。
+验证包括真实 ComfyUI 加载器、九个节点输入定义、前端资源注册、本机路由、实际 Raffle 与角色和艺术家索引数据，以及历史预览、类别权重与 CFG 的基本执行。浏览器中验证了三类角色筛选和 Auto Cycle 的角色替换。
 
 回归测试可在仓库目录执行：
 
@@ -230,7 +255,7 @@ node --test tests/*.test.mjs
 python tests/check_prompt_snapshot_comfy.py /path/to/ComfyUI
 ```
 
-包含七项 Raffle 回归测试、八项 Raffle Character 测试、三项角色分类测试、三项前端标签格式测试、九项历史清空与接口测试、五项清空按钮测试，以及十项提示词快照测试和九项快照恢复测试。清空测试只使用临时文件，覆盖删除范围、缓存失效、并发出图、请求授权和前端预览更新。快照还使用真实 ComfyUI 执行器、PromptQueue 与 Save Image 验证连续出图、缓存命中、PNG 元数据回读，以及不依赖前端显示的任务历史记录。验证未执行完整模型出图。
+包含七项 Raffle 回归测试、十二项 Raffle Character 测试、十一项 Raffle Artist 测试、三项角色分类测试、三项前端标签格式测试、九项历史清空与接口测试、五项清空按钮测试，以及十项提示词快照测试和九项快照恢复测试。角色测试覆盖仅 trigger 输出时的完整标签筛选；艺术家测试覆盖顺序分组、循环、种子复现、去重与格式转换。清空测试只使用临时文件，覆盖删除范围、缓存失效、并发出图、请求授权和前端预览更新。快照还使用真实 ComfyUI 执行器、PromptQueue 与 Save Image 验证连续出图、缓存命中、PNG 元数据回读，以及不依赖前端显示的任务历史记录。验证未执行完整模型出图。
 
 ## 来源与致谢
 
