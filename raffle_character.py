@@ -40,6 +40,10 @@ class RaffleCharacter(Raffle):
                     "default": "trigger+tags",
                     "tooltip": "Choose the output text only. Both modes filter characters using their complete trigger + tags.",
                 }),
+                "top_n": ("INT", {
+                    "default": 0, "min": 0, "max": 0x7fffffff,
+                    "tooltip": "After sex and tag filtering, randomly draw from the top N characters by popularity (work count). 0 uses all matching characters.",
+                }),
             },
         }
 
@@ -50,7 +54,7 @@ class RaffleCharacter(Raffle):
     )
 
     def process_tags(self, taglists_must_include="", filter_out_tags="", seed=0,
-                     tag_form="Anima", character_sex="Female", output_mode="trigger+tags"):
+                     tag_form="Anima", character_sex="Female", output_mode="trigger+tags", top_n=0):
         sex = character_sex.strip().lower()
         if sex not in ("female", "male", "others"):
             raise ValueError(f"Unknown Character Sex: {character_sex}")
@@ -58,6 +62,8 @@ class RaffleCharacter(Raffle):
             raise ValueError(f"Unknown tag form: {tag_form}")
         if output_mode not in ("trigger+tags", "trigger"):
             raise ValueError(f"Unknown character output mode: {output_mode}")
+        if type(top_n) is not int or top_n < 0:
+            raise ValueError("top_n must be a non-negative integer; 0 uses all matching characters.")
 
         required = {_tag_key(tag) for tag in self.normalize_tags(taglists_must_include)}
         excluded = {_tag_key(tag) for tag in self.normalize_tags(filter_out_tags)}
@@ -84,6 +90,10 @@ class RaffleCharacter(Raffle):
                 "if the character index is empty, update it from Anima Style Explorer's Characters tab."
             )
 
+        matching_count = len(candidates)
+        if top_n:
+            candidates = sorted(candidates, key=lambda entry: artist_data._safe_int(entry[0].get("works", 0)),
+                                reverse=True)[:top_n]
         character, tags = random.Random(seed).choice(candidates)
         if output_mode == "trigger":
             tags = self.normalize_tags(character.get("trigger") or character.get("tag") or "")
@@ -93,7 +103,9 @@ class RaffleCharacter(Raffle):
         debug = (
             "Source: Anima Style Explorer / Animadex characters\n"
             f"Character index size: {len(characters)}\n"
-            f"Matching character pool size: {len(candidates)}\n"
+            f"Matching character pool size: {matching_count}\n"
+            f"Top N: {top_n} (0 = all)\n"
+            f"Draw pool size: {len(candidates)}\n"
             f"Character Sex: {character_sex}\n"
             f"Output mode: {output_mode}\n"
             f"Seed: {seed}\n"

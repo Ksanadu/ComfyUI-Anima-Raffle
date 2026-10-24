@@ -41,7 +41,7 @@ class RaffleCharacterTests(unittest.TestCase):
         self.assertEqual(set(schema), {"required"})
         self.assertEqual(set(schema["required"]), {
             "seed", "taglists_must_include", "filter_out_tags", "tag_form", "character_sex",
-            "output_mode",
+            "output_mode", "top_n",
         })
         self.assertEqual(schema["required"]["taglists_must_include"][1]["default"], "")
         self.assertEqual(schema["required"]["filter_out_tags"][1]["default"], "")
@@ -49,7 +49,9 @@ class RaffleCharacterTests(unittest.TestCase):
         self.assertEqual(schema["required"]["tag_form"][1]["default"], "Anima")
         self.assertEqual(schema["required"]["output_mode"][0], ["trigger+tags", "trigger"])
         self.assertEqual(schema["required"]["output_mode"][1]["default"], "trigger+tags")
-        self.assertEqual(list(schema["required"])[-1], "output_mode")
+        self.assertEqual(list(schema["required"])[-2:], ["output_mode", "top_n"])
+        self.assertEqual(schema["required"]["top_n"][1]["default"], 0)
+        self.assertEqual(schema["required"]["top_n"][1]["min"], 0)
         self.assertEqual(self.node.RETURN_NAMES, ("Raffled output", "Unfiltered", "Debug info"))
 
     def test_all_required_tags_match_trigger_and_descriptions(self):
@@ -141,6 +143,65 @@ class RaffleCharacterTests(unittest.TestCase):
         self.source.return_value = []
         with self.assertRaisesRegex(ValueError, "character index is empty"):
             self.node.process_tags()
+
+    def test_top_n_is_applied_after_all_tag_and_sex_filters(self):
+        self.source.return_value = [
+            {"trigger": "wrong series", "tags": ["1girl", "blue eyes"], "works": 9000},
+            {"trigger": "male, touhou", "tags": ["1boy", "blue eyes"], "works": 8000},
+            {"trigger": "excluded, touhou", "tags": ["1girl", "blue eyes", "long hair"], "works": 7000},
+            {"trigger": "low, touhou", "tags": ["1girl", "blue eyes"], "works": 20},
+            {"trigger": "high, touhou", "tags": ["1girl", "blue eyes"], "works": 100},
+        ]
+        output, unfiltered, debug = self.node.process_tags(
+            taglists_must_include="touhou, blue eyes", filter_out_tags="long hair", top_n=1,
+        )
+        self.assertTrue(output.startswith("high, touhou"))
+        self.assertEqual(output, unfiltered)
+        self.assertIn("Matching character pool size: 2", debug)
+        self.assertIn("Draw pool size: 1", debug)
+
+    def test_top_ten_excludes_lower_ranked_characters(self):
+        self.source.return_value = [{"trigger": f"character {index}", "tags": ["1girl"], "works": index}
+                                    for index in range(15)]
+        selected = {self.node.process_tags(seed=seed, top_n=10, output_mode="trigger")[0] for seed in range(100)}
+        self.assertEqual(selected, {f"character {index}" for index in range(5, 15)})
+
+    def test_zero_keeps_original_pool_order_and_seed_selection(self):
+        records = [{**item, "works": index * 100} for index, item in enumerate(CHARACTERS)]
+        self.source.return_value = records
+        for seed in range(20):
+            actual = self.node.process_tags(seed=seed, top_n=0)
+            expected = module.random.Random(seed).choice([records[index] for index in (0, 1, 2, 6)])
+            self.assertIn(f"Selected character: {expected['trigger']}", actual[2])
+            self.assertEqual(actual, self.node.process_tags(seed=seed))
+            self.assertIn("Draw pool size: 4", actual[2])
+
+    def test_popularity_is_numeric_and_cutoff_ties_keep_source_order(self):
+        self.source.return_value = [
+            {"trigger": "low", "tags": ["1girl"], "works": "9"},
+            {"trigger": "tie first", "tags": ["1girl"], "works": "100"},
+            {"trigger": "tie second", "tags": ["1girl"], "works": 100},
+            {"trigger": "missing", "tags": ["1girl"]},
+        ]
+        for seed in range(5):
+            self.assertEqual(self.node.process_tags(seed=seed, top_n=1, output_mode="trigger")[0], "tie first")
+        selected = {self.node.process_tags(seed=seed, top_n=2, output_mode="trigger")[0] for seed in range(20)}
+        self.assertEqual(selected, {"tie first", "tie second"})
+
+    def test_limit_above_pool_size_and_output_modes_preserve_selection(self):
+        kwargs = dict(seed=123, top_n=100, taglists_must_include="touhou, blue eyes")
+        full = self.node.process_tags(**kwargs)
+        trigger = self.node.process_tags(**kwargs, output_mode="trigger")
+        sd = self.node.process_tags(**kwargs, tag_form="SD")
+        self.assertEqual(full, self.node.process_tags(**kwargs))
+        self.assertEqual(trigger[0], "alice, touhou")
+        self.assertIn("Draw pool size: 1", full[2])
+        self.assertEqual(full[2], sd[2])
+
+    def test_invalid_limits_are_rejected(self):
+        for value in (-1, 1.5, "10", True):
+            with self.subTest(value=value), self.assertRaisesRegex(ValueError, "non-negative integer"):
+                self.node.process_tags(top_n=value)
 
 
 if __name__ == "__main__":
