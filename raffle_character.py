@@ -4,6 +4,9 @@ from . import artist_data
 from .raffle import Raffle, format_anima_tag
 
 
+CHARACTER_SEX_OPTIONS = ("Female", "Male", "Others", "Female+Male", "Female+Others", "Female+Male+Others")
+
+
 def _tag_key(tag):
     return tag.replace("\\(", "(").replace("\\)", ")").casefold()
 
@@ -35,7 +38,7 @@ class RaffleCharacter(Raffle):
                     "tooltip": "Exclude characters containing ANY of these tags. This filters the character pool, not the selected character's output tags.",
                 }),
                 "tag_form": (["Anima", "SD"], {"default": "Anima"}),
-                "character_sex": (["Female", "Male", "Others"], {"default": "Female"}),
+                "character_sex": (list(CHARACTER_SEX_OPTIONS), {"default": "Female"}),
                 "output_mode": (["trigger+tags", "trigger"], {
                     "default": "trigger+tags",
                     "tooltip": "Choose the output text only. Both modes filter characters using their complete trigger + tags.",
@@ -56,8 +59,9 @@ class RaffleCharacter(Raffle):
     def process_tags(self, taglists_must_include="", filter_out_tags="", seed=0,
                      tag_form="Anima", character_sex="Female", output_mode="trigger+tags", top_n=0):
         sex = character_sex.strip().lower()
-        if sex not in ("female", "male", "others"):
+        if sex not in (option.lower() for option in CHARACTER_SEX_OPTIONS):
             raise ValueError(f"Unknown Character Sex: {character_sex}")
+        allowed_sexes = set(sex.split("+"))
         if tag_form not in ("Anima", "SD"):
             raise ValueError(f"Unknown tag form: {tag_form}")
         if output_mode not in ("trigger+tags", "trigger"):
@@ -78,7 +82,7 @@ class RaffleCharacter(Raffle):
                 descriptions = [descriptions]
             tags = self.normalize_tags(", ".join([trigger, *descriptions]))
             keys = {_tag_key(tag) for tag in tags}
-            if _character_sex(keys) != sex:
+            if _character_sex(keys) not in allowed_sexes:
                 continue
             if not required.issubset(keys) or not excluded.isdisjoint(keys):
                 continue

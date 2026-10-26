@@ -46,6 +46,9 @@ class RaffleCharacterTests(unittest.TestCase):
         self.assertEqual(schema["required"]["taglists_must_include"][1]["default"], "")
         self.assertEqual(schema["required"]["filter_out_tags"][1]["default"], "")
         self.assertEqual(schema["required"]["character_sex"][1]["default"], "Female")
+        self.assertEqual(schema["required"]["character_sex"][0], [
+            "Female", "Male", "Others", "Female+Male", "Female+Others", "Female+Male+Others",
+        ])
         self.assertEqual(schema["required"]["tag_form"][1]["default"], "Anima")
         self.assertEqual(schema["required"]["output_mode"][0], ["trigger+tags", "trigger"])
         self.assertEqual(schema["required"]["output_mode"][1]["default"], "trigger+tags")
@@ -116,7 +119,7 @@ class RaffleCharacterTests(unittest.TestCase):
             self.node.process_tags(**{**kwargs, "filter_out_tags": "long hair"}, output_mode="trigger")
 
     def test_trigger_only_preserves_seed_selection_for_all_sex_pools(self):
-        for sex in ("Female", "Male", "Others"):
+        for sex in ("Female", "Male", "Others", "Female+Male", "Female+Others", "Female+Male+Others"):
             for seed in range(8):
                 with self.subTest(sex=sex, seed=seed):
                     full = self.node.process_tags(seed=seed, character_sex=sex)
@@ -202,6 +205,65 @@ class RaffleCharacterTests(unittest.TestCase):
         for value in (-1, 1.5, "10", True):
             with self.subTest(value=value), self.assertRaisesRegex(ValueError, "non-negative integer"):
                 self.node.process_tags(top_n=value)
+
+    def test_combined_sexes_draw_from_the_union_without_duplicating_or_reordering_records(self):
+        indices = {
+            "Female+Male": (0, 1, 2, 3, 6),
+            "Female+Others": (0, 1, 2, 4, 5, 6),
+            "Female+Male+Others": tuple(range(7)),
+        }
+        for sex, positions in indices.items():
+            expected_pool = [CHARACTERS[index] for index in positions]
+            selected = set()
+            for seed in range(50):
+                with self.subTest(sex=sex, seed=seed):
+                    output, unfiltered, debug = self.node.process_tags(seed=seed, character_sex=sex, output_mode="trigger")
+                    expected = module.random.Random(seed).choice(expected_pool)["trigger"]
+                    self.assertEqual(output, expected)
+                    self.assertEqual(output, unfiltered)
+                    self.assertIn(f"Matching character pool size: {len(positions)}", debug)
+                    selected.add(output)
+            self.assertEqual(selected, {item["trigger"] for item in expected_pool})
+
+    def test_combined_sexes_still_apply_include_and_exclude_tags(self):
+        for sex in ("Female+Male", "Female+Male+Others"):
+            output, _, debug = self.node.process_tags(character_sex=sex, taglists_must_include="touhou, blue eyes",
+                                                      filter_out_tags="long hair", output_mode="trigger")
+            self.assertEqual(output, "hero, touhou")
+            self.assertIn("Matching character pool size: 1", debug)
+        with self.assertRaisesRegex(ValueError, "No matching Female\\+Others"):
+            self.node.process_tags(character_sex="Female+Others", taglists_must_include="touhou, blue eyes",
+                                   filter_out_tags="long hair")
+        output, _, _ = self.node.process_tags(character_sex="Female+Others", taglists_must_include="original",
+                                              filter_out_tags="metal body", output_mode="trigger")
+        self.assertEqual(output, "duo, original")
+
+    def test_top_n_ranks_the_whole_merged_pool_instead_of_each_sex_separately(self):
+        self.source.return_value = [
+            {"trigger": "girl", "tags": ["1girl", "blue eyes"], "works": 30},
+            {"trigger": "boy", "tags": ["1boy", "blue eyes"], "works": 100},
+            {"trigger": "robot", "tags": ["blue eyes"], "works": 60},
+            {"trigger": "excluded", "tags": ["1boy", "red eyes"], "works": 1000},
+        ]
+        kwargs = dict(taglists_must_include="blue eyes", output_mode="trigger", top_n=1)
+        for sex, expected in (("Female+Male", "boy"), ("Female+Others", "robot"), ("Female+Male+Others", "boy")):
+            for seed in range(5):
+                self.assertEqual(self.node.process_tags(seed=seed, character_sex=sex, **kwargs)[0], expected)
+        selected = set()
+        for seed in range(20):
+            output, _, debug = self.node.process_tags(seed=seed, character_sex="Female+Male+Others", **{**kwargs, "top_n": 2})
+            selected.add(output)
+            self.assertIn("Matching character pool size: 3", debug)
+            self.assertIn("Draw pool size: 2", debug)
+        self.assertEqual(selected, {"boy", "robot"})
+
+    def test_combined_sex_validation_preserves_case_insensitive_matching(self):
+        actual = self.node.process_tags(character_sex=" female+MALE ", output_mode="trigger")
+        expected = self.node.process_tags(character_sex="Female+Male", output_mode="trigger")
+        self.assertEqual(actual[:2], expected[:2])
+        for sex in ("", "Female+unknown", "Female+Male+unknown", "Male+Others"):
+            with self.subTest(sex=sex), self.assertRaisesRegex(ValueError, "Unknown Character Sex"):
+                self.node.process_tags(character_sex=sex)
 
 
 if __name__ == "__main__":

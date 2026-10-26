@@ -4,7 +4,7 @@
 
 An integrated ComfyUI node pack combining Anima Style Explorer and ComfyUI-Raffle, with artist and character raffles, character sex filters, Auto Cycle, and Anima/SD tag formatting.
 
-整合版本：`1.7.0`。本项目是独立社区 fork，保留原有节点类型标识和接口。
+整合版本：`1.8.0`。本项目是独立社区 fork，保留原有节点类型标识和接口。
 
 ## 新增功能
 
@@ -55,13 +55,25 @@ Since version 1.6.2, the original Raffle node is displayed as **Raffle Scene** u
 | taglists_must_include | 空 | 角色的 trigger + tags 必须包含所有指定标签 |
 | filter_out_tags | 空 | 角色包含任一指定标签时，排除整个角色 |
 | tag_form | Anima | Anima 输出空格标签，SD 输出下划线标签；颜文字保留原样 |
-| character_sex | Female | Female、Male、Others，分类规则与浏览器和 Auto Cycle 一致 |
+| character_sex | Female | Female、Male、Others 及三种组合，各类别规则与浏览器和 Auto Cycle 一致 |
 | output_mode | trigger+tags | `trigger+tags` 输出完整提示词；`trigger` 只输出角色 trigger |
 | top_n | `0` | 先完成性别与标签筛选，再从 Popularity 最高的前 N 位中抽取；0 使用全部匹配角色 |
 
 两个输入框使用逗号或换行分隔标签，支持默认的空格写法，也兼容下划线写法及大小写差异。例如 `taglists_must_include` 填入 `touhou, blue eyes`，只会抽取完整 trigger + tags 同时包含 `touhou` 和 `blue eyes` 的角色。`filter_out_tags` 填入 `red eyes, long hair`，会排除包含其中任一标签的角色。
 
 两框均为空时，从当前 Character Sex 对应的角色池随机抽取。默认 Female 并不包含 Male 或 Others。
+
+`1.8.0` 为 **Raffle Character** 新增三种性别组合：
+
+| 选项 | 抽取范围 |
+| --- | --- |
+| Female+Male | 合并 Female 与 Male，不包含 Others |
+| Female+Others | 合并 Female 与 Others，不包含 Male |
+| Female+Male+Others | 三类全部参与 |
+
+组合选项按角色合并候选池，保留原有标签条件筛选；`top_n` 在合并并筛选后的整个候选池中按 Popularity 截取前 N 位，再随机抽取。Others 仍包含同时有 `1girl` 和 `1boy`、或两者都没有的角色。默认仍为 Female，浏览器和 Auto Cycle 的性别选单保持原有三项。
+
+Version 1.8.0 adds **Female+Male**, **Female+Others**, and **Female+Male+Others** to Raffle Character. Each option draws from the union of its named categories, with existing tag filters still applied. Top N limits the combined matching pool by popularity before seeded sampling. The default remains Female; browser and Auto Cycle options are unchanged.
 
 `1.7.0` 新增 `top_n` 整数栏。例如必需标签填写 `touhou, blue eyes`、`top_n` 填 `10` 时，先筛出符合当前性别、必需标签与排除标签的角色，再按本地作品数量 `works` 从高到低排序，仅从前十位中随机抽取。匹配不足 N 位时使用全部匹配角色；数量相同时保持索引中的原有顺序。默认 `0` 不限制范围，也保留原有候选顺序和 seed 抽取结果。Debug info 显示匹配角色总数和实际抽签池大小。
 
@@ -280,7 +292,7 @@ node --test tests/*.test.mjs
 python tests/check_prompt_snapshot_comfy.py /path/to/ComfyUI
 ```
 
-包含七项 Raffle 回归测试、十八项 Raffle Character 测试、二十项 Raffle Artist 测试、三项角色分类测试、三项前端标签格式测试、九项历史清空与接口测试、五项清空按钮测试，以及十项提示词快照测试和九项快照恢复测试。角色测试覆盖仅 trigger 输出时的完整标签筛选；艺术家测试覆盖四种升降序排列、缺失评分、固定洗牌遍历、顺序分组、循环、种子复现、去重与格式转换。清空测试只使用临时文件，覆盖删除范围、缓存失效、并发出图、请求授权和前端预览更新。快照还使用真实 ComfyUI 执行器、PromptQueue 与 Save Image 验证连续出图、缓存命中、PNG 元数据回读，以及不依赖前端显示的任务历史记录。验证未执行完整模型出图。
+包含七项 Raffle 回归测试、二十二项 Raffle Character 测试、二十项 Raffle Artist 测试、三项角色分类测试、三项前端标签格式测试、九项历史清空与接口测试、五项清空按钮测试，以及十项提示词快照测试和九项快照恢复测试。角色测试覆盖仅 trigger 输出时的完整标签筛选；艺术家测试覆盖四种升降序排列、缺失评分、固定洗牌遍历、顺序分组、循环、种子复现、去重与格式转换。清空测试只使用临时文件，覆盖删除范围、缓存失效、并发出图、请求授权和前端预览更新。快照还使用真实 ComfyUI 执行器、PromptQueue 与 Save Image 验证连续出图、缓存命中、PNG 元数据回读，以及不依赖前端显示的任务历史记录。验证未执行完整模型出图。
 
 ## 来源与致谢
 
