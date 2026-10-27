@@ -47,17 +47,22 @@ class RaffleCharacter(Raffle):
                     "default": 0, "min": 0, "max": 0x7fffffff,
                     "tooltip": "After sex and tag filtering, randomly draw from the top N characters by popularity (work count). 0 uses all matching characters.",
                 }),
+                "character_count": ("INT", {
+                    "default": 1, "min": 1, "max": 0x7fffffff,
+                    "tooltip": "Number of distinct characters to draw after sex/tag filtering and top_n. Outputs are joined with commas. Must not exceed the final draw pool size.",
+                }),
             },
         }
 
     OUTPUT_TOOLTIPS = (
-        "The selected character's trigger + tags or trigger only, in the chosen tag format",
+        "The selected characters' trigger + tags or trigger only, joined with commas in the chosen tag format",
         "The same selected text; exclusions filter characters before drawing",
-        "Data source, matching pool size, seed, filters and selected character",
+        "Data source, matching pool size, seed, filters, count and selected characters",
     )
 
     def process_tags(self, taglists_must_include="", filter_out_tags="", seed=0,
-                     tag_form="Anima", character_sex="Female", output_mode="trigger+tags", top_n=0):
+                     tag_form="Anima", character_sex="Female", output_mode="trigger+tags", top_n=0,
+                     character_count=1):
         sex = character_sex.strip().lower()
         if sex not in (option.lower() for option in CHARACTER_SEX_OPTIONS):
             raise ValueError(f"Unknown Character Sex: {character_sex}")
@@ -68,6 +73,8 @@ class RaffleCharacter(Raffle):
             raise ValueError(f"Unknown character output mode: {output_mode}")
         if type(top_n) is not int or top_n < 0:
             raise ValueError("top_n must be a non-negative integer; 0 uses all matching characters.")
+        if type(character_count) is not int or character_count < 1:
+            raise ValueError("character_count must be a positive integer.")
 
         required = {_tag_key(tag) for tag in self.normalize_tags(taglists_must_include)}
         excluded = {_tag_key(tag) for tag in self.normalize_tags(filter_out_tags)}
@@ -98,12 +105,23 @@ class RaffleCharacter(Raffle):
         if top_n:
             candidates = sorted(candidates, key=lambda entry: artist_data._safe_int(entry[0].get("works", 0)),
                                 reverse=True)[:top_n]
-        character, tags = random.Random(seed).choice(candidates)
-        if output_mode == "trigger":
-            tags = self.normalize_tags(character.get("trigger") or character.get("tag") or "")
+        if character_count > len(candidates):
+            raise ValueError(
+                f"Draw pool size is {len(candidates)} after sex/tag filtering and top_n; "
+                f"cannot draw {character_count} distinct characters. Reduce character_count or relax the filters/top_n."
+            )
+        rng = random.Random(seed)
+        selected = [rng.choice(candidates)] if character_count == 1 else rng.sample(candidates, character_count)
+        tags = []
+        selected_info = []
+        for character, character_tags in selected:
+            trigger = character.get("trigger") or character.get("tag") or ""
+            tags.extend(self.normalize_tags(trigger) if output_mode == "trigger" else character_tags)
+            selected_info.append(f"Selected character: {trigger}")
         if tag_form == "Anima":
             tags = [format_anima_tag(tag) for tag in tags]
         output = ", ".join(tags)
+        selection_debug = "\n".join(selected_info)
         debug = (
             "Source: Anima Style Explorer / Animadex characters\n"
             f"Character index size: {len(characters)}\n"
@@ -113,7 +131,8 @@ class RaffleCharacter(Raffle):
             f"Character Sex: {character_sex}\n"
             f"Output mode: {output_mode}\n"
             f"Seed: {seed}\n"
-            f"Selected character: {character.get('trigger') or character.get('tag')}\n"
+            f"Character count: {character_count}\n"
+            f"{selection_debug}\n"
             f"Must include: {taglists_must_include or '(none)'}\n"
             f"Exclude: {filter_out_tags or '(none)'}"
         )

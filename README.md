@@ -4,7 +4,7 @@
 
 An integrated ComfyUI node pack combining Anima Style Explorer and ComfyUI-Raffle, with artist and character raffles, character sex filters, Auto Cycle, and Anima/SD tag formatting.
 
-整合版本：`1.8.0`。本项目是独立社区 fork，保留原有节点类型标识和接口。
+整合版本：`1.9.0`。本项目是独立社区 fork，保留原有节点类型标识和接口。
 
 ## 新增功能
 
@@ -47,7 +47,7 @@ Since version 1.6.2, the original Raffle node is displayed as **Raffle Scene** u
 
 ### 4. Raffle Character
 
-在 `Anima Raffle` 分类中提供 **Raffle Character**，直接从 Anima Style Explorer 的 Animadex 角色索引抽取角色，不需要连接输入节点。主面板提供七项控件：
+在 `Anima Raffle` 分类中提供 **Raffle Character**，直接从 Anima Style Explorer 的 Animadex 角色索引抽取角色，不需要连接输入节点。主面板提供八项控件：
 
 | 控件 | 默认值 | 行为 |
 | --- | --- | --- |
@@ -58,10 +58,17 @@ Since version 1.6.2, the original Raffle node is displayed as **Raffle Scene** u
 | character_sex | Female | Female、Male、Others 及三种组合，各类别规则与浏览器和 Auto Cycle 一致 |
 | output_mode | trigger+tags | `trigger+tags` 输出完整提示词；`trigger` 只输出角色 trigger |
 | top_n | `0` | 先完成性别与标签筛选，再从 Popularity 最高的前 N 位中抽取；0 使用全部匹配角色 |
+| character_count | `1` | 每次抽取的不同角色数量，可填写正整数；不超过最终抽签池大小 |
 
 两个输入框使用逗号或换行分隔标签，支持默认的空格写法，也兼容下划线写法及大小写差异。例如 `taglists_must_include` 填入 `touhou, blue eyes`，只会抽取完整 trigger + tags 同时包含 `touhou` 和 `blue eyes` 的角色。`filter_out_tags` 填入 `red eyes, long hair`，会排除包含其中任一标签的角色。
 
 两框均为空时，从当前 Character Sex 对应的角色池随机抽取。默认 Female 并不包含 Male 或 Others。
+
+`1.9.0` 新增 `character_count` 抽取数量整数栏，默认 `1`，没有 6 个的限制。先完成性别、必需标签与排除标签筛选，再应用 `top_n`，最后从该角色池中不放回地抽取指定数量。例如 `top_n = 10`、`character_count = 3`，会从最热门的十位匹配角色中抽取三位不同角色。
+
+多个角色按抽中顺序用逗号合并到 **Raffled output** 和 **Unfiltered**：`trigger` 模式合并各角色的完整 trigger，`trigger+tags` 模式合并各自完整的 trigger + tags，继续使用 Anima / SD 格式并保留颜文字。Debug info 显示抽取数量与逐个角色名单。指定数量超过最终角色池大小时，节点会提示减少数量或调整筛选 / `top_n`，不会重复抽取或悄悄减少数量。默认抽取 1 个时保留原有 seed 的角色和文本结果。
+
+Version 1.9.0 adds the positive integer `character_count` control (default `1`, not limited to six). Draws select distinct characters after sex/tag filtering and Top N. Selected triggers or complete trigger + tags are joined with commas in both text outputs, preserving Anima/SD formatting and emoticons. Debug info lists every selected character. Requests exceeding the final pool size report an error instead of repeating characters or reducing the count. A count of one preserves existing seeded selections.
 
 `1.8.0` 为 **Raffle Character** 新增三种性别组合：
 
@@ -292,7 +299,7 @@ node --test tests/*.test.mjs
 python tests/check_prompt_snapshot_comfy.py /path/to/ComfyUI
 ```
 
-包含七项 Raffle 回归测试、二十二项 Raffle Character 测试、二十项 Raffle Artist 测试、三项角色分类测试、三项前端标签格式测试、九项历史清空与接口测试、五项清空按钮测试，以及十项提示词快照测试和九项快照恢复测试。角色测试覆盖仅 trigger 输出时的完整标签筛选；艺术家测试覆盖四种升降序排列、缺失评分、固定洗牌遍历、顺序分组、循环、种子复现、去重与格式转换。清空测试只使用临时文件，覆盖删除范围、缓存失效、并发出图、请求授权和前端预览更新。快照还使用真实 ComfyUI 执行器、PromptQueue 与 Save Image 验证连续出图、缓存命中、PNG 元数据回读，以及不依赖前端显示的任务历史记录。验证未执行完整模型出图。
+包含七项 Raffle 回归测试、二十九项 Raffle Character 测试、二十项 Raffle Artist 测试、三项角色分类测试、三项前端标签格式测试、九项历史清空与接口测试、五项清空按钮测试，以及十项提示词快照测试和九项快照恢复测试。角色测试覆盖仅 trigger 输出时的完整标签筛选；艺术家测试覆盖四种升降序排列、缺失评分、固定洗牌遍历、顺序分组、循环、种子复现、去重与格式转换。清空测试只使用临时文件，覆盖删除范围、缓存失效、并发出图、请求授权和前端预览更新。快照还使用真实 ComfyUI 执行器、PromptQueue 与 Save Image 验证连续出图、缓存命中、PNG 元数据回读，以及不依赖前端显示的任务历史记录。验证未执行完整模型出图。
 
 ## 来源与致谢
 

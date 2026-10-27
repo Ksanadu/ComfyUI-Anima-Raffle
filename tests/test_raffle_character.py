@@ -41,7 +41,7 @@ class RaffleCharacterTests(unittest.TestCase):
         self.assertEqual(set(schema), {"required"})
         self.assertEqual(set(schema["required"]), {
             "seed", "taglists_must_include", "filter_out_tags", "tag_form", "character_sex",
-            "output_mode", "top_n",
+            "output_mode", "top_n", "character_count",
         })
         self.assertEqual(schema["required"]["taglists_must_include"][1]["default"], "")
         self.assertEqual(schema["required"]["filter_out_tags"][1]["default"], "")
@@ -52,9 +52,11 @@ class RaffleCharacterTests(unittest.TestCase):
         self.assertEqual(schema["required"]["tag_form"][1]["default"], "Anima")
         self.assertEqual(schema["required"]["output_mode"][0], ["trigger+tags", "trigger"])
         self.assertEqual(schema["required"]["output_mode"][1]["default"], "trigger+tags")
-        self.assertEqual(list(schema["required"])[-2:], ["output_mode", "top_n"])
+        self.assertEqual(list(schema["required"])[-3:], ["output_mode", "top_n", "character_count"])
         self.assertEqual(schema["required"]["top_n"][1]["default"], 0)
         self.assertEqual(schema["required"]["top_n"][1]["min"], 0)
+        self.assertEqual(schema["required"]["character_count"][1]["default"], 1)
+        self.assertEqual(schema["required"]["character_count"][1]["min"], 1)
         self.assertEqual(self.node.RETURN_NAMES, ("Raffled output", "Unfiltered", "Debug info"))
 
     def test_all_required_tags_match_trigger_and_descriptions(self):
@@ -264,6 +266,80 @@ class RaffleCharacterTests(unittest.TestCase):
         for sex in ("", "Female+unknown", "Female+Male+unknown", "Male+Others"):
             with self.subTest(sex=sex), self.assertRaisesRegex(ValueError, "Unknown Character Sex"):
                 self.node.process_tags(character_sex=sex)
+
+    def test_multiple_characters_are_distinct_repeatable_and_do_not_change_global_random_state(self):
+        state = module.random.getstate()
+        kwargs = dict(seed=123, character_sex="Female+Male+Others", character_count=3, output_mode="trigger")
+        result = self.node.process_tags(**kwargs)
+        chosen = [line.removeprefix("Selected character: ") for line in result[2].splitlines()
+                  if line.startswith("Selected character: ")]
+        self.assertEqual(len(chosen), 3)
+        self.assertEqual(len(set(chosen)), 3)
+        self.assertTrue(set(chosen) <= {item["trigger"] for item in CHARACTERS})
+        self.assertEqual(result[:2], (", ".join(chosen),) * 2)
+        self.assertEqual(result, self.node.process_tags(**kwargs))
+        self.assertEqual(state, module.random.getstate())
+        self.assertIn("Character count: 3", result[2])
+
+    def test_count_is_applied_after_merged_sex_tag_filters_and_top_n(self):
+        self.source.return_value = [
+            {"trigger": "girl, touhou", "tags": ["1girl", "blue eyes"], "works": 80},
+            {"trigger": "boy, touhou", "tags": ["1boy", "blue eyes"], "works": 100},
+            {"trigger": "robot, touhou", "tags": ["blue eyes"], "works": 60},
+            {"trigger": "excluded, touhou", "tags": ["1girl", "blue eyes", "long hair"], "works": 1000},
+            {"trigger": "other", "tags": ["1girl", "blue eyes"], "works": 5000},
+        ]
+        for seed in range(5):
+            output, _, debug = self.node.process_tags(seed=seed, character_sex="Female+Male+Others",
+                taglists_must_include="touhou, blue eyes", filter_out_tags="long hair", top_n=2,
+                character_count=2, output_mode="trigger")
+            self.assertIn("girl, touhou", output)
+            self.assertIn("boy, touhou", output)
+            self.assertNotIn("robot", output)
+            self.assertNotIn("excluded", output)
+            self.assertIn("Matching character pool size: 3", debug)
+            self.assertIn("Draw pool size: 2", debug)
+
+    def test_multiple_character_output_modes_formats_and_faces(self):
+        self.source.return_value = [
+            {"trigger": "alice_margatroid, touhou", "tags": ["1girl", "blue_eyes", "^_^", "o_o"]},
+            {"trigger": "other_girl, touhou", "tags": ["1girl", "red eyes"]},
+        ]
+        kwargs = dict(seed=42, character_count=2)
+        full = self.node.process_tags(**kwargs)
+        sd = self.node.process_tags(**kwargs, tag_form="SD")
+        trigger = self.node.process_tags(**kwargs, output_mode="trigger")
+        self.assertEqual(full[0], "alice margatroid, touhou, 1girl, blue eyes, ^_^, o_o, other girl, touhou, 1girl, red eyes")
+        self.assertEqual(sd[0], "alice_margatroid, touhou, 1girl, blue_eyes, ^_^, o_o, other_girl, touhou, 1girl, red_eyes")
+        self.assertEqual(trigger[0], "alice margatroid, touhou, other girl, touhou")
+        self.assertEqual(full[2], sd[2])
+        self.assertEqual(trigger[2], full[2].replace("Output mode: trigger+tags", "Output mode: trigger"))
+
+    def test_explicit_one_matches_the_default_for_original_seed_results(self):
+        for sex in ("Female", "Male", "Others", "Female+Male+Others"):
+            for seed in range(10):
+                self.assertEqual(self.node.process_tags(seed=seed, character_sex=sex),
+                                 self.node.process_tags(seed=seed, character_sex=sex, character_count=1))
+
+    def test_insufficient_filtered_or_top_n_pool_does_not_repeat_or_silently_reduce_count(self):
+        for kwargs in (dict(taglists_must_include="touhou, blue eyes"), dict(top_n=1)):
+            with self.subTest(kwargs=kwargs), self.assertRaisesRegex(ValueError, "Draw pool size is 1"):
+                self.node.process_tags(character_count=2, **kwargs)
+        with self.assertRaisesRegex(ValueError, "Reduce character_count"):
+            self.node.process_tags(character_count=5)
+
+    def test_invalid_character_counts_are_rejected(self):
+        for value in (0, -1, 1.5, "2", True):
+            with self.subTest(value=value), self.assertRaisesRegex(ValueError, "positive integer"):
+                self.node.process_tags(character_count=value)
+
+    def test_character_count_can_exceed_six_and_draw_the_whole_pool(self):
+        self.source.return_value = [{"trigger": f"character {index}", "tags": ["1girl"]} for index in range(10)]
+        output, unfiltered, debug = self.node.process_tags(character_count=10, output_mode="trigger")
+        self.assertEqual(set(output.split(", ")), {f"character {index}" for index in range(10)})
+        self.assertEqual(len(output.split(", ")), 10)
+        self.assertEqual(output, unfiltered)
+        self.assertIn("Character count: 10", debug)
 
 
 if __name__ == "__main__":
